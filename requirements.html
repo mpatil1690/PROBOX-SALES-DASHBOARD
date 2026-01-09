@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ProBox Sales Dashboard — Requirements</title>
+    <style>
+      :root {
+        --bg: #0b0f17;
+        --panel: #0f172a;
+        --panel2: #0b1224;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --border: rgba(255, 255, 255, 0.08);
+        --accent: #60a5fa;
+        --good: #22c55e;
+        --warn: #f59e0b;
+        --bad: #ef4444;
+        --chip: rgba(96, 165, 250, 0.12);
+        --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+          "Courier New", monospace;
+        --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+          "Apple Color Emoji", "Segoe UI Emoji";
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: var(--sans);
+        background: radial-gradient(1200px 600px at 20% -10%, rgba(96, 165, 250, 0.18), transparent),
+          radial-gradient(900px 500px at 90% 10%, rgba(34, 197, 94, 0.12), transparent),
+          var(--bg);
+        color: var(--text);
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      header {
+        border-bottom: 1px solid var(--border);
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(10px);
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 28px 18px;
+      }
+      h1 {
+        margin: 0 0 6px 0;
+        font-size: 22px;
+        letter-spacing: 0.2px;
+      }
+      .meta {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--chip);
+        color: var(--text);
+        font-size: 12px;
+      }
+      .chip code {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text);
+      }
+      main {
+        padding: 22px 0 44px 0;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+      @media (min-width: 960px) {
+        .grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      section {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.8), rgba(11, 18, 36, 0.85));
+        overflow: hidden;
+      }
+      section h2 {
+        margin: 0;
+        padding: 14px 16px;
+        font-size: 14px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .body {
+        padding: 14px 16px 16px 16px;
+      }
+      p {
+        margin: 0 0 10px 0;
+        color: var(--text);
+        line-height: 1.55;
+      }
+      ul {
+        margin: 10px 0 0 0;
+        padding-left: 18px;
+        color: var(--text);
+        line-height: 1.55;
+      }
+      li {
+        margin: 6px 0;
+      }
+      code,
+      pre {
+        font-family: var(--mono);
+      }
+      pre {
+        margin: 10px 0 0 0;
+        padding: 12px;
+        border: 1px solid var(--border);
+        background: rgba(2, 6, 23, 0.7);
+        border-radius: 10px;
+        overflow-x: auto;
+        font-size: 12px;
+        color: var(--text);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th,
+      td {
+        border-bottom: 1px solid var(--border);
+        padding: 10px 8px;
+        text-align: left;
+        vertical-align: top;
+        font-size: 13px;
+      }
+      th {
+        color: var(--muted);
+        font-weight: 600;
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .todo {
+        background: rgba(245, 158, 11, 0.12);
+        color: #fbbf24;
+      }
+      .inprogress {
+        background: rgba(96, 165, 250, 0.12);
+        color: #93c5fd;
+      }
+      .done {
+        background: rgba(34, 197, 94, 0.12);
+        color: #86efac;
+      }
+      .note {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .small {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .k {
+        color: var(--muted);
+      }
+      .mono {
+        font-family: var(--mono);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <h1>ProBox Sales Dashboard — Requirements (Internal)</h1>
+        <div class="small">
+          Purpose: capture the complete requirements + build task list + “don’t forget” notes in one
+          place.
+        </div>
+        <div class="meta" aria-label="metadata">
+          <span class="chip"><span class="k">Status</span> <code>building</code></span>
+          <span class="chip"><span class="k">Orchestrator</span> <code>n8n</code></span>
+          <span class="chip"><span class="k">Data/UI</span> <code>Airtable + Interfaces</code></span>
+          <span class="chip"><span class="k">Email (MVP)</span> <code>Gmail</code></span>
+          <span class="chip"><span class="k">Email (Prod)</span> <code>Outlook/M365</code></span>
+          <span class="chip"><span class="k">Read-only</span> <code>yes</code></span>
+        </div>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div class="grid">
+        <section>
+          <h2>
+            Requirement Summary
+            <span class="status done">locked</span>
+          </h2>
+          <div class="body">
+            <p>
+              Build an internal, read-only dashboard that shows a real-time snapshot of every active
+              quote and its current stage in the sales pipeline, automatically updated by reading
+              the shared sales inbox <span class="mono">sales@proboxinc.com</span>.
+            </p>
+            <ul>
+              <li>
+                <strong>Primary data source</strong>: email inbox content (human-written emails and
+                attachments).
+              </li>
+              <li>
+                <strong>Automation</strong>: AI/LLM interprets each email and generates structured
+                events that update the quote’s stage.
+              </li>
+              <li>
+                <strong>UI</strong>: Airtable Interfaces (grid + detail + timeline + admin
+                reprocess).
+              </li>
+              <li>
+                <strong>No links back from dashboard</strong>: no requirement to click back to the
+                original email/attachment from UI.
+              </li>
+              <li>
+                <strong>Extracted details are optional</strong>: no mandatory fields per stage; any
+                extracted info is enrichment.
+              </li>
+              <li>
+                <strong>Migration</strong>: MVP uses Gmail; production target is Outlook/M365.
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section>
+          <h2>
+            Canonical Sales Stages (1–14)
+            <span class="status done">locked</span>
+          </h2>
+          <div class="body">
+            <p class="note">
+              Note: Stage 15 was dropped. PO Received implies Quote Approval is complete.
+            </p>
+            <table aria-label="stages">
+              <thead>
+                <tr>
+                  <th style="width: 56px">#</th>
+                  <th>Stage</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>1</td><td>Inquiry &amp; Lead Capture</td></tr>
+                <tr><td>2</td><td>Research &amp; Discovery</td></tr>
+                <tr><td>3</td><td>Quotation Preparation (includes quote sent)</td></tr>
+                <tr><td>4</td><td>Quote Approval</td></tr>
+                <tr><td>5</td><td>Purchase Order (PO) Received</td></tr>
+                <tr><td>6</td><td>Order Processing</td></tr>
+                <tr><td>7</td><td>Invoicing</td></tr>
+                <tr><td>8</td><td>Payment Received</td></tr>
+                <tr><td>9</td><td>Release Sent to Customer</td></tr>
+                <tr><td>10</td><td>Release Received</td></tr>
+                <tr><td>11</td><td>Delivery Preparation</td></tr>
+                <tr><td>12</td><td>Delivery Set (shipped / in transit / tracking shared)</td></tr>
+                <tr><td>13</td><td>Delivery Confirmed</td></tr>
+                <tr><td>14</td><td>Post-Delivery Follow-up / Closeout</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <section style="margin-top: 14px">
+        <h2>
+          System Choice (Final)
+          <span class="status done">locked</span>
+        </h2>
+        <div class="body">
+          <table aria-label="system table">
+            <thead>
+              <tr>
+                <th>Element</th>
+                <th>System</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Orchestration</td>
+                <td><strong>n8n</strong></td>
+                <td>Owns triggers + workflow steps + retries + failure handling.</td>
+              </tr>
+              <tr>
+                <td>Email (MVP)</td>
+                <td><strong>Gmail</strong> via Gmail API/n8n Gmail trigger</td>
+                <td>Tail-end implementation to validate pipeline quickly.</td>
+              </tr>
+              <tr>
+                <td>Email (Production)</td>
+                <td><strong>Outlook/M365</strong> via Microsoft Graph/n8n Microsoft trigger</td>
+                <td>Swap connectors; downstream logic remains identical.</td>
+              </tr>
+              <tr>
+                <td>LLM calls</td>
+                <td><strong>n8n HTTP/OpenAI node</strong> (prompt tunable)</td>
+                <td>
+                  LLM produces strict JSON: quote identifier + detected events + stage effects +
+                  optional extracted fields.
+                </td>
+              </tr>
+              <tr>
+                <td>System of record + UI</td>
+                <td><strong>Airtable</strong> (Base + Interfaces)</td>
+                <td>Read-only dashboard: grid + detail + timeline + admin reprocess.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="grid" style="margin-top: 14px">
+        <section>
+          <h2>
+            Airtable Data Model (Minimum)
+            <span class="status inprogress">in progress</span>
+          </h2>
+          <div class="body">
+            <p>
+              Airtable stores the state required to render the dashboard. No links back to email are
+              required, but we still store message IDs for dedupe/reprocess.
+            </p>
+            <ul>
+              <li>
+                <strong>Quotes</strong>: one row per quote #
+                <ul>
+                  <li><span class="mono">QuoteNumber</span> (primary key)</li>
+                  <li><span class="mono">CurrentStage</span> (1–14)</li>
+                  <li><span class="mono">StageStatuses</span> (JSON or 14 fields)</li>
+                  <li><span class="mono">LastUpdatedAt</span></li>
+                  <li>Optional enrichment fields (customer, city, qty, container type, etc.)</li>
+                </ul>
+              </li>
+              <li>
+                <strong>Events</strong>: one row per extracted event
+                <ul>
+                  <li><span class="mono">QuoteNumber</span> (link to Quotes)</li>
+                  <li><span class="mono">EventType</span> (e.g., PO_RECEIVED)</li>
+                  <li><span class="mono">EventTime</span></li>
+                  <li><span class="mono">StageEffects</span> (e.g., stage 5 done; stage 4 implied)</li>
+                  <li><span class="mono">ExtractedFields</span> (JSON)</li>
+                  <li><span class="mono">Confidence</span> (optional)</li>
+                  <li><span class="mono">ProviderMessageId</span> (dedupe key)</li>
+                </ul>
+              </li>
+              <li>
+                <strong>Messages</strong> (optional but recommended): one row per processed message
+                <ul>
+                  <li><span class="mono">ProviderMessageId</span> (unique)</li>
+                  <li><span class="mono">ReceivedAt</span>, <span class="mono">Subject</span>, <span class="mono">From</span></li>
+                  <li><span class="mono">ProcessingStatus</span> (processed/failed)</li>
+                </ul>
+              </li>
+              <li>
+                <strong>AdminJobs</strong>: reprocess jobs (optional in Airtable; can live in n8n)
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section>
+          <h2>
+            n8n Workflows (Minimum)
+            <span class="status inprogress">in progress</span>
+          </h2>
+          <div class="body">
+            <ul>
+              <li>
+                <strong>Workflow A: Ingest → Extract → Upsert</strong>
+                <ul>
+                  <li>Trigger: New email in inbox (Gmail now, Outlook later)</li>
+                  <li>Normalize: HTML→text, include thread context if available</li>
+                  <li>LLM: extract strict JSON (quote # + event types + stage effects)</li>
+                  <li>Dedupe: skip if ProviderMessageId already processed</li>
+                  <li>Write: upsert Quote + insert Event (+ optional Message row)</li>
+                </ul>
+              </li>
+              <li>
+                <strong>Workflow B: Admin Reprocess</strong>
+                <ul>
+                  <li>Trigger: manual button/webhook</li>
+                  <li>Input: time range or quote #</li>
+                  <li>Action: re-fetch relevant emails, re-run extraction, update Airtable</li>
+                </ul>
+              </li>
+              <li>
+                <strong>Workflow C: Failure Handling</strong>
+                <ul>
+                  <li>On error: write to “Messages” as failed + capture error text</li>
+                  <li>Optional: notify via Slack/email</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      <section style="margin-top: 14px">
+        <h2>
+          Build Task List (with Status)
+          <span class="status inprogress">in progress</span>
+        </h2>
+        <div class="body">
+          <p class="note">
+            This list is intentionally concrete so implementation doesn’t drift.
+          </p>
+          <table aria-label="tasks">
+            <thead>
+              <tr>
+                <th style="width: 140px">Status</th>
+                <th>Task</th>
+                <th style="width: 220px">Owner / Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="status todo">todo</span></td>
+                <td>Create Airtable Base: Quotes, Events, (optional) Messages</td>
+                <td>Define field types + views</td>
+              </tr>
+              <tr>
+                <td><span class="status todo">todo</span></td>
+                <td>Design Airtable Interfaces: Grid + Quote Detail + Timeline + Admin Reprocess</td>
+                <td>Read-only UI</td>
+              </tr>
+              <tr>
+                <td><span class="status todo">todo</span></td>
+                <td>n8n Workflow A (Gmail): new mail trigger → LLM → upsert Quote + Event</td>
+                <td>Dedupe by ProviderMessageId</td>
+              </tr>
+              <tr>
+                <td><span class="status todo">todo</span></td>
+                <td>Stage projection rule: compute CurrentStage + StageStatuses from Events</td>
+                <td>Implement in n8n Code node</td>
+              </tr>
+              <tr>
+                <td><span class="status todo">todo</span></td>
+                <td>n8n Workflow B: Admin reprocess by time range or quote #</td>
+                <td>Re-run extraction and recompute stage</td>
+              </tr>
+              <tr>
+                <td><span class="status todo">todo</span></td>
+                <td>n8n Workflow C: failure logging + retry + notification</td>
+                <td>Write failed messages to Airtable</td>
+              </tr>
+              <tr>
+                <td><span class="status todo">todo</span></td>
+                <td>Outlook/M365 migration plan: swap trigger + message fetch nodes</td>
+                <td>Keep same Event schema</td>
+              </tr>
+              <tr>
+                <td><span class="status todo">todo</span></td>
+                <td>UAT: validate stage updates across sample threads</td>
+                <td>Iterate prompt only</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section style="margin-top: 14px">
+        <h2>
+          Things to Remember (Don’t Forget)
+          <span class="status done">locked</span>
+        </h2>
+        <div class="body">
+          <ul>
+            <li>
+              <strong>Don’t over-engineer rules</strong>: emails are messy; LLM interpretation will
+              evolve via prompt tuning.
+            </li>
+            <li>
+              <strong>No required fields</strong>: all extracted details are optional enrichment.
+            </li>
+            <li>
+              <strong>PO received implies approval</strong>: stage 5 implies stage 4 is complete.
+            </li>
+            <li>
+              <strong>No dashboard links back to source emails/docs</strong>: not required for v1.
+            </li>
+            <li>
+              <strong>Dedupe is still mandatory</strong>: store ProviderMessageId to avoid
+              double-processing.
+            </li>
+            <li>
+              <strong>Design for Gmail → Outlook swap</strong>: keep a connector abstraction in n8n
+              (same downstream schema).
+            </li>
+            <li>
+              <strong>Keep Events as the source of truth</strong>: compute Quote stage from Events,
+              not from ad-hoc overwrites.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section style="margin-top: 14px">
+        <h2>
+          Prompt Contract (High Level)
+          <span class="status inprogress">in progress</span>
+        </h2>
+        <div class="body">
+          <p>
+            The prompt can change, but the output contract must stay stable so Airtable and the
+            dashboard never break.
+          </p>
+          <pre>{
+  "primary_quote_identifier": "Q-10422",
+  "detected_events": [
+    {
+      "type": "PO_RECEIVED",
+      "stage_effects": [
+        { "stage": 5, "state": "done" },
+        { "stage": 4, "state": "done", "implied": true }
+      ],
+      "extracted_fields": { "poNumber": "PO-8831" },
+      "confidence": 0.92
+    }
+  ]
+}</pre>
+          <p class="note">
+            Enforce JSON validity in n8n before writing to Airtable.
+          </p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
+
+
