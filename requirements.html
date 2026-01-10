@@ -77,6 +77,30 @@
         font-size: 12px;
         color: var(--text);
       }
+      .copybtn {
+        font-family: var(--sans);
+        font-size: 12px;
+        padding: 6px 10px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: rgba(2, 6, 23, 0.45);
+        color: var(--text);
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .copybtn:hover {
+        border-color: rgba(96, 165, 250, 0.45);
+      }
+      .copyrow {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 6px;
+      }
+      .copyrow p {
+        margin: 0;
+      }
       main {
         padding: 22px 0 44px 0;
       }
@@ -195,27 +219,161 @@
     </style>
   </head>
   <body>
+    <script>
+      function copyTextFromPre(preId, btn) {
+        const pre = document.getElementById(preId);
+        if (!pre) return;
+        const text = pre.innerText || pre.textContent || "";
+        navigator.clipboard.writeText(text).then(
+          () => {
+            const old = btn.textContent;
+            btn.textContent = "Copied";
+            setTimeout(() => (btn.textContent = old), 900);
+          },
+          () => {
+            // fallback: select text
+            const range = document.createRange();
+            range.selectNodeContents(pre);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        );
+      }
+    </script>
     <header>
       <div class="wrap">
         <h1>ProBox Sales Dashboard — Requirements (Internal)</h1>
         <div class="small">
           Purpose: capture the complete requirements + build task list + “don’t forget” notes in one
-          place.
+          place. Canonical initiative folder:
+          <span class="mono">/Users/mpatil/ProBox/Dashboard</span>
         </div>
         <div class="meta" aria-label="metadata">
-          <span class="chip"><span class="k">Status</span> <code>building</code></span>
+          <span class="chip"><span class="k">Status</span> <code>building - E2E writes working</code></span>
           <span class="chip"><span class="k">Orchestrator</span> <code>n8n</code></span>
           <span class="chip"><span class="k">Data/UI</span> <code>Airtable + Interfaces</code></span>
           <span class="chip"><span class="k">Email (MVP)</span> <code>Gmail</code></span>
           <span class="chip"><span class="k">Email (Prod)</span> <code>Outlook/M365</code></span>
           <span class="chip"><span class="k">Read-only</span> <code>yes</code></span>
+          <span class="chip"><span class="k">Folder</span> <code>/Users/mpatil/ProBox/Dashboard</code></span>
         </div>
       </div>
     </header>
 
     <main class="wrap">
+      <!-- =========================================================
+           QUICK COMMANDS + INDEX (keep at the top)
+           ========================================================= -->
+      <section id="commands" style="margin-bottom: 14px">
+        <h2>
+          Daily Commands (Copy/Paste)
+          <span class="status done">locked</span>
+        </h2>
+        <div class="body">
+          <div class="copyrow">
+            <p><strong>Dash-resume</strong> (paste at the start of a session):</p>
+            <button class="copybtn" type="button" onclick="copyTextFromPre('cmd-dash-resume', this)">Copy</button>
+          </div>
+          <pre id="cmd-dash-resume">Dash-resume
+
+Follow these steps:
+1) Read /Users/mpatil/ProBox/Dashboard/requirements.html
+2) Re-sync context from:
+   - Implementation Status &amp; Summary
+   - Canonical Processing Architecture (Holistic)
+   - Build Task List
+3) Ask 1–3 clarifying questions only if required to proceed
+4) Continue from the “🚧 In Progress / Next Steps” list and update statuses as you complete items</pre>
+
+          <div class="copyrow">
+            <p><strong>Dash-close</strong> (paste before you stop for the day):</p>
+            <button class="copybtn" type="button" onclick="copyTextFromPre('cmd-dash-close', this)">Copy</button>
+          </div>
+          <pre id="cmd-dash-close">Dash-close
+
+Before stopping, update /Users/mpatil/ProBox/Dashboard/requirements.html with:
+1) What changed today (bullets)
+1.1) Add a new entry to the “Daily Change Log” section (date-stamped)
+2) Current n8n workflow topology (node list in order) + which nodes were added/renamed
+3) Current Airtable schema (only if fields changed)
+4) What is working end-to-end (explicit)
+5) What is NOT working / blockers (explicit)
+6) Next steps for tomorrow (3–7 bullets)
+7) Update task statuses in “Build Task List”</pre>
+
+          <p class="note">
+            These commands are designed to be copy/paste instructions so the assistant can “revive”
+            all context from this document and then continue cleanly.
+          </p>
+        </div>
+      </section>
+
+      <section id="index" style="margin-bottom: 14px">
+        <h2>
+          Index
+          <span class="status done">locked</span>
+        </h2>
+        <div class="body">
+          <ul>
+            <li><a href="#commands">Daily Commands (Copy/Paste)</a></li>
+            <li><a href="#index">Index</a></li>
+            <li><a href="#changelog">Daily Change Log</a></li>
+            <li><a href="#summary">Requirement Summary</a></li>
+            <li><a href="#status">Implementation Status &amp; Summary</a></li>
+            <li><a href="#stages">Canonical Sales Stages (1–14)</a></li>
+            <li><a href="#airtable">Airtable Data Model</a></li>
+            <li><a href="#workflow">n8n Workflow</a></li>
+            <li><a href="#cumulative">Cumulative Updates (Core Behavior)</a></li>
+            <li><a href="#prompt">Prompt Contract</a></li>
+            <li><a href="#tasks">Build Task List</a></li>
+            <li><a href="#notes">Things to Remember</a></li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="changelog" style="margin-bottom: 14px">
+        <h2>
+          Daily Change Log
+          <span class="status inprogress">in progress</span>
+        </h2>
+        <div class="body">
+          <p class="note">
+            Add one entry per day on <strong>Dash-close</strong>. This is the fastest way to “revive” full context later.
+          </p>
+          <table aria-label="daily-change-log">
+            <thead>
+              <tr>
+                <th style="width: 140px">Date</th>
+                <th>Changes (what/why)</th>
+                <th style="width: 240px">n8n Nodes / Schema touched</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="mono">YYYY-MM-DD</span></td>
+                <td>
+                  - What changed today<br />
+                  - Why we changed it<br />
+                  - What is now working end-to-end<br />
+                  - What is still broken / next blocker
+                </td>
+                <td>
+                  - Nodes added/renamed<br />
+                  - Airtable fields added/changed<br />
+                  - Any important config (Typecast ON, etc.)
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           OVERVIEW
+           ========================================================= -->
       <div class="grid">
-        <section>
+        <section id="summary">
           <h2>
             Requirement Summary
             <span class="status done">locked</span>
@@ -227,34 +385,38 @@
               the shared sales inbox <span class="mono">sales@proboxinc.com</span>.
             </p>
             <ul>
-              <li>
-                <strong>Primary data source</strong>: email inbox content (human-written emails and
-                attachments).
-              </li>
-              <li>
-                <strong>Automation</strong>: AI/LLM interprets each email and generates structured
-                events that update the quote’s stage.
-              </li>
-              <li>
-                <strong>UI</strong>: Airtable Interfaces (grid + detail + timeline + admin
-                reprocess).
-              </li>
-              <li>
-                <strong>No links back from dashboard</strong>: no requirement to click back to the
-                original email/attachment from UI.
-              </li>
-              <li>
-                <strong>Extracted details are optional</strong>: no mandatory fields per stage; any
-                extracted info is enrichment.
-              </li>
-              <li>
-                <strong>Migration</strong>: MVP uses Gmail; production target is Outlook/M365.
-              </li>
+              <li><strong>Primary data source</strong>: email inbox content (human-written emails and attachments).</li>
+              <li><strong>Automation</strong>: AI/LLM interprets each email and generates structured stage updates.</li>
+              <li><strong>UI</strong>: Airtable grid (no drill-down required) + optional Airtable Interfaces later.</li>
+              <li><strong>No links back from dashboard</strong>: not required for v1.</li>
+              <li><strong>Extracted details</strong>: optional; stage cells contain the best extracted stage update text.</li>
+              <li><strong>Migration</strong>: MVP uses Gmail; production target is Outlook/M365.</li>
             </ul>
           </div>
         </section>
 
-        <section>
+        <section id="status">
+          <h2>
+            Implementation Status &amp; Summary
+            <span class="status inprogress">in progress</span>
+          </h2>
+          <div class="body">
+            <p class="note">
+              This section is the canonical “where we are today”. Keep it updated on every <strong>Dash-close</strong>.
+            </p>
+            <!-- Existing Implementation Status & Summary content remains below in the document -->
+            <p class="note">
+              Jump: <a href="#tasks">Build Task List</a>
+            </p>
+          </div>
+        </section>
+      </div>
+
+      <!-- =========================================================
+           STAGES + DATA MODEL
+           ========================================================= -->
+      <div class="grid">
+        <section id="stages">
           <h2>
             Canonical Sales Stages (1–14)
             <span class="status done">locked</span>
@@ -289,9 +451,33 @@
             </table>
           </div>
         </section>
+
+        <section id="airtable">
+          <h2>
+            Airtable Data Model (Single Table)
+            <span class="status done">✅ created</span>
+          </h2>
+          <div class="body">
+            <p class="note">
+              ✅ Base: <strong>ProBox Sales Dashboard</strong> → Table: <strong>Quotes</strong>. Single row per quote number.
+            </p>
+            <p>
+              Stage columns are long text; stage cells contain cumulative “stage update” details text.
+            </p>
+            <!-- Existing Airtable schema content remains below in the document -->
+            <p class="note">
+              Jump: <a href="#cumulative">Cumulative Updates</a>
+            </p>
+          </div>
+        </section>
       </div>
 
-      <section style="margin-top: 14px">
+      <!-- =========================================================
+           WORKFLOW + PROMPT + TASKS + NOTES
+           (Existing sections appear below; we keep them intact but linkable)
+           ========================================================= -->
+
+      <section id="workflow" style="margin-top: 14px">
         <h2>
           System Choice (Final)
           <span class="status done">locked</span>
@@ -339,52 +525,160 @@
         </div>
       </section>
 
+      <section style="margin-top: 14px">
+        <h2>
+          n8n Node Naming Convention (Required)
+          <span class="status done">locked</span>
+        </h2>
+        <div class="body">
+          <p>
+            Every time we add a node, we must rename it immediately so the workflow is readable and
+            debugging is fast.
+          </p>
+          <p><strong>Naming format</strong></p>
+          <ul>
+            <li><strong>Prefix</strong>: Source/Step type (Gmail / OpenAI / Airtable / Code / IF)</li>
+            <li><strong>Verb</strong>: what it does (Build, Parse, Search, Merge, Update, Create)</li>
+            <li><strong>Object</strong>: what it acts on (Email Packet, LLM JSON, Quote Row)</li>
+          </ul>
+          <p><strong>Examples (recommended)</strong></p>
+          <ul>
+            <li><span class="mono">Gmail Trigger - New Email</span></li>
+            <li><span class="mono">Code - Build Email Packet</span></li>
+            <li><span class="mono">OpenAI - Extract Stage Updates</span></li>
+            <li><span class="mono">Code - Parse LLM JSON</span></li>
+            <li><span class="mono">IF - Stop (Missing Quote ID)</span></li>
+            <li><span class="mono">Airtable - Search Quote</span></li>
+            <li><span class="mono">Code - Merge/Append Stage Updates</span></li>
+            <li><span class="mono">IF - Record Exists?</span></li>
+            <li><span class="mono">Airtable - Update Quote (Typecast ON)</span></li>
+            <li><span class="mono">Airtable - Create Quote (Typecast ON)</span></li>
+            <li><span class="mono">Code - Dedupe Mark Processed</span></li>
+          </ul>
+        </div>
+      </section>
+
       <div class="grid" style="margin-top: 14px">
         <section>
           <h2>
-            Airtable Data Model (Minimum)
-            <span class="status inprogress">in progress</span>
+            Airtable Data Model (Minimum — Single Table)
+            <span class="status done">✅ created</span>
           </h2>
           <div class="body">
+            <p class="note">
+              ✅ <strong>Status: Created</strong> - Base "ProBox Sales Dashboard" with table "Quotes" has
+              been created with all fields listed below.
+            </p>
             <p>
-              Airtable stores the state required to render the dashboard. No links back to email are
-              required, but we still store message IDs for dedupe/reprocess.
+              The dashboard is a single Airtable grid. Each stage is a column, and each cell contains
+              the best extracted "stage update" text (not just done/in-progress).
             </p>
             <ul>
               <li>
-                <strong>Quotes</strong>: one row per quote #
+                <strong>Table: Quotes</strong> (one row per quote #)
                 <ul>
-                  <li><span class="mono">QuoteNumber</span> (primary key)</li>
-                  <li><span class="mono">CurrentStage</span> (1–14)</li>
-                  <li><span class="mono">StageStatuses</span> (JSON or 14 fields)</li>
-                  <li><span class="mono">LastUpdatedAt</span></li>
-                  <li>Optional enrichment fields (customer, city, qty, container type, etc.)</li>
+                  <li><span class="mono">QuoteNumber</span> (primary key / primary field)</li>
+                  <li><span class="mono">Customer</span> (optional)</li>
+                  <li><span class="mono">ReceivedAt</span> (date/time; first time we saw this quote)</li>
+                  <li><span class="mono">LastUpdatedAt</span> (date/time)</li>
+                  <li><span class="mono">CurrentStage</span> (1–14, computed by n8n)</li>
+                  <li>
+                    <span class="mono">FinalStatus</span> (single select:
+                    <span class="mono">open</span> |
+                    <span class="mono">closed</span> |
+                    <span class="mono">cancelled</span>)
+                  </li>
+                  <li><span class="mono">ClosedAt</span> (date/time; set once when FinalStatus becomes closed)</li>
+                  <li><span class="mono">CancelledAt</span> (date/time; set once when FinalStatus becomes cancelled)</li>
+                  <li>
+                    <span class="mono">IsJustReceived</span> (formula/checkbox): true if ReceivedAt is within last 2 days
+                  </li>
+                  <li>
+                    <span class="mono">ShowOnDashboard</span> (formula/checkbox): true if record should appear on dashboard
+                    (open always shows; cancelled shows for 2 days; closed never shows)
+                  </li>
+                  <li>
+                    <span class="mono">Inquiry &amp; Lead Capture</span> (long text)
+                  </li>
+                  <li>
+                    <span class="mono">Research &amp; Discovery</span> (long text)
+                  </li>
+                  <li>
+                    <span class="mono">Quotation Preparation</span> (long text)
+                  </li>
+                  <li>
+                    <span class="mono">Quote Approval</span> (long text)
+                  </li>
+                  <li>
+                    <span class="mono">PO Received</span> (long text)
+                  </li>
+                  <li>
+                    <span class="mono">Order Processing</span> (long text)
+                  </li>
+                  <li>
+                    <span class="mono">Invoicing</span> (long text)
+                  </li>
+                  <li>
+                    <span class="mono">Payment Received</span> (long text)
+                  </li>
+                  <li>
+                    <span class="mono">Release Sent</span> (long text)
+                  </li>
+                  <li>
+                    <span class="mono">Release Received</span> (long text)
+                  </li>
+                  <li>
+                    <span class="mono">Delivery Preparation</span> (long text)
+                  </li>
+                  <li>
+                    <span class="mono">Delivery Set</span> (long text)
+                  </li>
+                  <li>
+                    <span class="mono">Delivery Confirmed</span> (long text)
+                  </li>
+                  <li>
+                    <span class="mono">Post-Delivery Follow-up</span> (long text)
+                  </li>
+                  <li class="note">
+                    Optional: add parallel single-select fields like <span class="mono">Inquiry Status</span>,
+                    <span class="mono">Research Status</span>, etc. purely for coloring/filtering.
+                  </li>
                 </ul>
-              </li>
-              <li>
-                <strong>Events</strong>: one row per extracted event
-                <ul>
-                  <li><span class="mono">QuoteNumber</span> (link to Quotes)</li>
-                  <li><span class="mono">EventType</span> (e.g., PO_RECEIVED)</li>
-                  <li><span class="mono">EventTime</span></li>
-                  <li><span class="mono">StageEffects</span> (e.g., stage 5 done; stage 4 implied)</li>
-                  <li><span class="mono">ExtractedFields</span> (JSON)</li>
-                  <li><span class="mono">Confidence</span> (optional)</li>
-                  <li><span class="mono">ProviderMessageId</span> (dedupe key)</li>
-                </ul>
-              </li>
-              <li>
-                <strong>Messages</strong> (optional but recommended): one row per processed message
-                <ul>
-                  <li><span class="mono">ProviderMessageId</span> (unique)</li>
-                  <li><span class="mono">ReceivedAt</span>, <span class="mono">Subject</span>, <span class="mono">From</span></li>
-                  <li><span class="mono">ProcessingStatus</span> (processed/failed)</li>
-                </ul>
-              </li>
-              <li>
-                <strong>AdminJobs</strong>: reprocess jobs (optional in Airtable; can live in n8n)
               </li>
             </ul>
+            <p><strong>FinalStatus rule (deterministic):</strong></p>
+            <ul>
+              <li>
+                <strong>closed</strong>: all 14 stage status fields are <span class="mono">done</span>
+                (or, if you skip per-stage status fields, all 14 stage text columns are non-empty).
+                When it becomes closed, set <span class="mono">ClosedAt</span> once.
+              </li>
+              <li>
+                <strong>cancelled</strong>: set when an email indicates the quote/order is cancelled/withdrawn.
+                Set <span class="mono">CancelledAt</span> once. Cancelled stays visible on the dashboard
+                for 2 days, then drops off the active dashboard view (still retained in Airtable).
+              </li>
+              <li>
+                <strong>open</strong>: default while the quote is being worked (regardless of stage).
+              </li>
+            </ul>
+            <p><strong>Dashboard visibility (no extra workflow required)</strong></p>
+            <ul>
+              <li>
+                <strong>IsJustReceived</strong> (formula): <span class="mono">DATETIME_DIFF(NOW(), ReceivedAt, 'days') &lt;= 2</span>
+              </li>
+              <li>
+                <strong>ShowOnDashboard</strong> (formula): show open always; show cancelled only for 2 days; never show closed.
+              </li>
+              <li class="note">
+                Recommended Airtable view for the dashboard: filter to <span class="mono">ShowOnDashboard = 1</span>.
+              </li>
+            </ul>
+            <p class="note">
+              Dedupe/reprocess: for v1, store processed message IDs in n8n workflow storage. If
+              you ever want a durable audit history, add a second table later (“Messages” or “Events”),
+              but it is not required for the single-grid dashboard.
+            </p>
           </div>
         </section>
 
@@ -396,13 +690,14 @@
           <div class="body">
             <ul>
               <li>
-                <strong>Workflow A: Ingest → Extract → Upsert</strong>
+                <strong>Workflow A: Ingest → Extract → Update Grid</strong>
                 <ul>
                   <li>Trigger: New email in inbox (Gmail now, Outlook later)</li>
                   <li>Normalize: HTML→text, include thread context if available</li>
-                  <li>LLM: extract strict JSON (quote # + event types + stage effects)</li>
+                  <li>LLM: extract strict JSON (quote # + which stage(s) to update + stage text)</li>
                   <li>Dedupe: skip if ProviderMessageId already processed</li>
-                  <li>Write: upsert Quote + insert Event (+ optional Message row)</li>
+                  <li>Write: upsert Quote row + update the stage column(s) with extracted text</li>
+                  <li>Compute: update CurrentStage + LastUpdatedAt</li>
                 </ul>
               </li>
               <li>
@@ -414,7 +709,18 @@
                 </ul>
               </li>
               <li>
-                <strong>Workflow C: Failure Handling</strong>
+                <strong>Workflow C: Maintenance Sweep (optional)</strong>
+                <ul>
+                  <li>
+                    Optional: if you prefer not to rely on Airtable formula fields for dashboard visibility, you can run a daily sweep.
+                  </li>
+                  <li class="note">
+                    Current recommended approach: use Airtable formula fields (<span class="mono">ShowOnDashboard</span>) so no sweep is required.
+                  </li>
+                </ul>
+              </li>
+              <li>
+                <strong>Workflow D: Failure Handling</strong>
                 <ul>
                   <li>On error: write to “Messages” as failed + capture error text</li>
                   <li>Optional: notify via Slack/email</li>
@@ -426,6 +732,156 @@
       </div>
 
       <section style="margin-top: 14px">
+        <h2>
+          Implementation Status & Summary
+          <span class="status inprogress">in progress</span>
+        </h2>
+        <div class="body">
+          <h3>✅ Completed So Far (Today)</h3>
+          <ul>
+            <li>
+              <strong>Airtable Base Created</strong>: "ProBox Sales Dashboard" with table "Quotes"
+              <ul>
+                <li>Primary field: <span class="mono">QuoteNumber</span> (Single line text)</li>
+                <li>
+                  Control fields: <span class="mono">Customer</span>, <span class="mono">ReceivedAt</span> (Date/time),
+                  <span class="mono">LastUpdatedAt</span> (Date/time), <span class="mono">CurrentStage</span> (Number),
+                  <span class="mono">FinalStatus</span> (Single select: open, closed, cancelled),
+                  <span class="mono">ClosedAt</span> (Date/time), <span class="mono">CancelledAt</span> (Date/time),
+                  <span class="mono">IsJustReceived</span> (Formula/Checkbox),
+                  <span class="mono">ShowOnDashboard</span> (Formula/Checkbox)
+                </li>
+                <li>14 stage columns (all Long text): Inquiry & Lead Capture, Research & Discovery, Quotation Preparation, Quote Approval, PO Received, Order Processing, Invoicing, Payment Received, Release Sent, Release Received, Delivery Preparation, Delivery Set, Delivery Confirmed, Post-Delivery Follow-up</li>
+              </ul>
+            </li>
+            <li>
+              <strong>Airtable Personal Access Token Created</strong>: "n8n-probox-dashboard" with scopes data.records:read, data.records:write
+            </li>
+            <li>
+              <strong>n8n Workflow (E2E write working)</strong>:
+              <ul>
+                <li><strong>Build Email Packet</strong>: fixed missing Subject/From in <span class="mono">email_text</span></li>
+                <li><strong>OpenAI extraction</strong>: returns strict JSON with quote id + stage_updates</li>
+                <li><strong>Stop/Ignore</strong>: IF node correctly ignores emails with no quote id</li>
+                <li><strong>Airtable writes</strong>: Quote rows are created/updated in Airtable and visible in the Quotes table</li>
+                <li><strong>Typecast enabled</strong>: required in Airtable Update node to accept date/number fields reliably</li>
+                <li><strong>Search records</strong>: can find existing quote row by QuoteNumber (returns 1 item)</li>
+                <li><strong>Merge step</strong>: JavaScript merge node outputs <span class="mono">recordId</span> + merged <span class="mono">fields</span> for append-style updates</li>
+              </ul>
+            </li>
+          </ul>
+
+          <h3>🚧 In Progress / Next Steps (Tomorrow)</h3>
+          <ul>
+            <li>
+              <strong>Create-if-missing</strong>: finish the record-exists branching
+              <ul>
+                <li>If Search records returns 0 → Create record (using merged fields)</li>
+                <li>If Search records returns 1 → Update record (using merged fields)</li>
+              </ul>
+            </li>
+            <li>
+              <strong>Dedupe</strong>:
+              <ul>
+                <li>Store processed <span class="mono">provider_message_id</span> so the same email can’t update twice</li>
+                <li>Mark as processed only after Airtable write succeeds</li>
+              </ul>
+            </li>
+            <li>
+              <strong>Verify cumulative append</strong>: send a second email for same quote and confirm stage cell appends with timestamp divider (no deletion)
+            </li>
+            <li>
+              <strong>Gmail Filter</strong>: Add subject/from filter to exclude system emails (like n8n access notifications)
+            </li>
+          </ul>
+
+          <h3>📋 Remaining Work (After Core Flow Works)</h3>
+          <ul>
+            <li>Dedupe logic (check ProviderMessageId in n8n storage before processing)</li>
+            <li>Dashboard visibility via Airtable formula field (ShowOnDashboard) + view filters (no sweep required)</li>
+            <li>Admin reprocess workflow (re-run extraction for time range)</li>
+            <li>Airtable Interface: Grid view with color coding (green=done, blue=in_progress, red=not_started)</li>
+            <li>Outlook/M365 migration (swap Gmail trigger → Outlook trigger)</li>
+          </ul>
+
+          <h3>🎯 Current Blockers / Questions</h3>
+          <ul>
+            <li>Create-if-missing branch still needs final wiring (Create record should use merged fields output)</li>
+            <li>Dedupe not implemented yet</li>
+            <li>FinalStatus “closed” rule can be tuned later (currently based on stage columns being non-empty)</li>
+          </ul>
+
+          <h3>📐 Canonical Processing Architecture (Holistic)</h3>
+          <p class="note">
+            This is the single, canonical architecture for handling real inbox behavior:
+            partial updates, new info, cumulative updates, and completion/“drop off”.
+          </p>
+
+          <p><strong>Core invariants</strong></p>
+          <ul>
+            <li><strong>One quote = one Airtable row</strong> keyed by <span class="mono">QuoteNumber</span>.</li>
+            <li><strong>Emails are deltas</strong>: each email may update 0–N stages.</li>
+            <li><strong>Cumulative merge</strong>: never delete prior stage text; default behavior is append with a timestamp divider.</li>
+            <li><strong>No duplicates</strong>: dedupe by <span class="mono">provider_message_id</span>.</li>
+              <li>
+                <strong>Drop off when done/cancelled</strong>: the “active dashboard” is an Airtable view filtered to
+                <span class="mono">ShowOnDashboard = 1</span> (formula field).
+              </li>
+          </ul>
+
+          <p><strong>Canonical node flow (n8n)</strong></p>
+          <pre><code>1) Gmail Trigger (new email)
+2) Code - Build Email Packet
+   Output: { provider_message_id, email_text }
+3) (Optional but recommended) Code - Dedupe
+   If provider_message_id already processed → stop
+4) OpenAI - Message a model
+   Input: email_text
+   Output: strict JSON string
+5) Code - Parse LLM JSON
+   Output: { primary_quote_identifier, stage_updates[], stop }
+6) IF stop === true
+   TRUE: stop/ignore
+   FALSE: continue
+7) Airtable - Search records (Quotes)
+   Filter: {QuoteNumber} = "primary_quote_identifier"
+   Output: 0 records or 1 record (existing)
+8) Code - Merge/Append Stage Updates
+   Inputs:
+     - existing Airtable record (if any)
+     - stage_updates[] from LLM
+   Behavior:
+     - for each returned stage_update:
+       - mergeCell(existing, new) => append with timestamp divider (avoid dupes)
+     - compute CurrentStage from highest stage that has content
+     - compute FinalStatus:
+       - cancelled if email indicates cancellation (set CancelledAt once)
+       - closed if all 14 stage columns non-empty (set ClosedAt once)
+       - else open
+     - set ReceivedAt on create; set ClosedAt/CancelledAt once
+   Output: { recordId (nullable), fields (object) }
+9) IF recordId exists?
+   TRUE: Airtable Update record (Typecast ON)
+   FALSE: Airtable Create record (Typecast ON)
+10) (Optional but recommended) Mark Dedupe Processed
+   Only after successful Airtable write</code></pre>
+
+          <p><strong>How we handle all email cases (explicit)</strong></p>
+          <ul>
+            <li><strong>Email has new info but only for 1 stage</strong>: only that stage column changes (append).</li>
+            <li><strong>Email has multiple stage updates</strong>: multiple columns update in one run.</li>
+            <li><strong>Email is shorter / missing fields</strong>: we do not clear anything; untouched columns stay as-is.</li>
+            <li><strong>Email is a correction</strong>: append with a “CORRECTION:” prefix (Phase I) and do not delete old text.</li>
+            <li><strong>Email is a reschedule</strong>: append new dates; do not erase old dates.</li>
+            <li><strong>Email is cancellation</strong>: set FinalStatus=cancelled, set CancelledAt once; keep active for 2 days then drop off.</li>
+            <li><strong>Email indicates completion</strong>: later stages may become populated; when all 14 are populated → FinalStatus becomes closed and it “drops off” the active view.</li>
+            <li><strong>Email has no usable quote identifier</strong>: stop/ignore (no row created) unless we later choose to create TEMP leads.</li>
+            <li><strong>One email updates multiple quotes</strong>: <em>Phase II</em> (split into multiple quote updates and run merge per quote).</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="tasks" style="margin-top: 14px">
         <h2>
           Build Task List (with Status)
           <span class="status inprogress">in progress</span>
@@ -444,24 +900,54 @@
             </thead>
             <tbody>
               <tr>
-                <td><span class="status todo">todo</span></td>
-                <td>Create Airtable Base: Quotes, Events, (optional) Messages</td>
-                <td>Define field types + views</td>
+                <td><span class="status done">done</span></td>
+                <td>Create Airtable Base: single table "Quotes" with stage-name columns</td>
+                <td>✅ Base created; all 20 fields added (6 control + 14 stage columns)</td>
+              </tr>
+              <tr>
+                <td><span class="status done">done</span></td>
+                <td>Create Airtable Personal Access Token for n8n</td>
+                <td>✅ Token "n8n-probox-dashboard" created with read/write scopes</td>
+              </tr>
+              <tr>
+                <td><span class="status done">done</span></td>
+                <td>n8n Workflow: Gmail Trigger → Code (email packet) → LLM → Parse JSON → If (stop check)</td>
+                <td>✅ All 5 nodes working; output validated</td>
+              </tr>
+              <tr>
+                <td><span class="status inprogress">in progress</span></td>
+                <td>n8n Code Node: Transform stage_updates[] → Airtable field mappings</td>
+                <td>Need to map stage_name to column names + compute CurrentStage/FinalStatus</td>
+              </tr>
+              <tr>
+                <td><span class="status inprogress">in progress</span></td>
+                <td>n8n Airtable Node: Complete field mappings (QuoteNumber, stages, timestamps)</td>
+                <td>Base/Table/Token set; field mappings pending</td>
               </tr>
               <tr>
                 <td><span class="status todo">todo</span></td>
-                <td>Design Airtable Interfaces: Grid + Quote Detail + Timeline + Admin Reprocess</td>
-                <td>Read-only UI</td>
+                <td>Test end-to-end: real email → Airtable upsert</td>
+                <td>Validate entire pipeline works</td>
               </tr>
               <tr>
                 <td><span class="status todo">todo</span></td>
-                <td>n8n Workflow A (Gmail): new mail trigger → LLM → upsert Quote + Event</td>
-                <td>Dedupe by ProviderMessageId</td>
+                <td>Gmail filter: exclude system/notification emails</td>
+                <td>Add subject/from filter to Gmail Trigger</td>
               </tr>
               <tr>
                 <td><span class="status todo">todo</span></td>
-                <td>Stage projection rule: compute CurrentStage + StageStatuses from Events</td>
-                <td>Implement in n8n Code node</td>
+                <td>Dedupe logic: store ProviderMessageId in n8n storage</td>
+                <td>Prevent double-processing same email</td>
+              </tr>
+              <tr>
+                <td><span class="status todo">todo</span></td>
+                <td>Design Airtable Interfaces: Grid with color coding</td>
+                <td>Green=done, blue=in_progress, red=not_started</td>
+              </tr>
+              <tr>
+                <td><span class="status todo">todo</span></td>
+                <td>Dashboard visibility: Airtable formula (ShowOnDashboard) + view filter</td>
+                <td>Cancelled stays visible 2 days, then drops off via formula; closed drops off immediately</td>
               </tr>
               <tr>
                 <td><span class="status todo">todo</span></td>
@@ -470,13 +956,13 @@
               </tr>
               <tr>
                 <td><span class="status todo">todo</span></td>
-                <td>n8n Workflow C: failure logging + retry + notification</td>
-                <td>Write failed messages to Airtable</td>
+                <td>n8n Workflow D: failure logging + retry + notification</td>
+                <td>Optional for v1; start with n8n error workflow</td>
               </tr>
               <tr>
                 <td><span class="status todo">todo</span></td>
                 <td>Outlook/M365 migration plan: swap trigger + message fetch nodes</td>
-                <td>Keep same Event schema</td>
+                <td>Keep same downstream schema</td>
               </tr>
               <tr>
                 <td><span class="status todo">todo</span></td>
@@ -488,7 +974,7 @@
         </div>
       </section>
 
-      <section style="margin-top: 14px">
+      <section id="notes" style="margin-top: 14px">
         <h2>
           Things to Remember (Don’t Forget)
           <span class="status done">locked</span>
@@ -509,47 +995,229 @@
               <strong>No dashboard links back to source emails/docs</strong>: not required for v1.
             </li>
             <li>
+              <strong>No drill-down</strong>: the grid is the dashboard; each stage cell contains the
+              latest extracted details text.
+            </li>
+            <li>
               <strong>Dedupe is still mandatory</strong>: store ProviderMessageId to avoid
               double-processing.
+            </li>
+            <li>
+              <strong>FinalStatus lifecycle</strong>: <span class="mono">open</span> until
+              <span class="mono">closed</span> or <span class="mono">cancelled</span>.
+              “Just received” is a <em>derived indicator</em> (see <span class="mono">IsJustReceived</span> formula),
+              not a status that n8n has to maintain.
+            </li>
+            <li>
+              <strong>Closure rule</strong>: mark <span class="mono">FinalStatus=closed</span> only when
+              all 14 stages are done; set <span class="mono">ClosedAt</span> once.
+            </li>
+            <li>
+              <strong>n8n coding choice</strong>: use <span class="mono">Code in JavaScript</span>
+              (simpler than Python for n8n beginners).
             </li>
             <li>
               <strong>Design for Gmail → Outlook swap</strong>: keep a connector abstraction in n8n
               (same downstream schema).
             </li>
             <li>
-              <strong>Keep Events as the source of truth</strong>: compute Quote stage from Events,
-              not from ad-hoc overwrites.
+              <strong>Keep the grid deterministic</strong>: compute <span class="mono">CurrentStage</span>,
+              <span class="mono">FinalStatus</span>, and <span class="mono">ClosedAt</span> from the stage
+              statuses/columns, not from manual edits.
             </li>
           </ul>
         </div>
       </section>
 
-      <section style="margin-top: 14px">
+      <section id="prompt" style="margin-top: 14px">
         <h2>
           Prompt Contract (High Level)
-          <span class="status inprogress">in progress</span>
+          <span class="status done">locked</span>
         </h2>
         <div class="body">
           <p>
-            The prompt can change, but the output contract must stay stable so Airtable and the
-            dashboard never break.
+            The prompt can change, but the output contract must stay stable so Airtable and the grid
+            never break. Output must identify the quote and provide stage updates as text.
           </p>
           <pre>{
   "primary_quote_identifier": "Q-10422",
-  "detected_events": [
+  "stage_updates": [
     {
-      "type": "PO_RECEIVED",
-      "stage_effects": [
-        { "stage": 5, "state": "done" },
-        { "stage": 4, "state": "done", "implied": true }
-      ],
-      "extracted_fields": { "poNumber": "PO-8831" },
-      "confidence": 0.92
+      "stage_name": "PO Received",
+      "status": "done",
+      "cell_text": "✅ PO received: PO-8831\\nQty: 4x 40HC\\nShip-to: Phoenix, AZ",
+      "confidence": 0.92,
+      "optional_fields": { "poNumber": "PO-8831" }
     }
   ]
 }</pre>
           <p class="note">
             Enforce JSON validity in n8n before writing to Airtable.
+          </p>
+        </div>
+      </section>
+
+      <section style="margin-top: 14px">
+        <h2>
+          n8n Workflow A (Step-by-step)
+          <span class="status done">locked</span>
+        </h2>
+        <div class="body">
+          <p>
+            This is the beginner-friendly build order for the core workflow:
+            <strong>Gmail Trigger → Code (email packet) → LLM → Airtable update</strong>.
+          </p>
+
+          <p><strong>Node 1: Gmail Trigger</strong></p>
+          <ul>
+            <li>Use the Gmail trigger that fires on new incoming emails.</li>
+            <li>Start broad (no complex filters). You can filter later once it works end-to-end.</li>
+          </ul>
+
+          <p><strong>Node 2: Code in JavaScript — Build Email Packet</strong></p>
+          <ul>
+            <li>Select <span class="mono">Code in JavaScript</span> (not Python).</li>
+            <li>
+              Set Mode to <strong>Run once for each item</strong> (each email is one item).
+            </li>
+            <li>Goal: output two stable fields for downstream nodes:</li>
+            <ul>
+              <li><span class="mono">provider_message_id</span> (dedupe key)</li>
+              <li><span class="mono">email_text</span> (From + Subject + Body)</li>
+            </ul>
+          </ul>
+
+          <pre>// n8n Code node (JavaScript) — Run once for each item
+function stripHtml(html) {
+  return String(html || "").replace(/&lt;[^&gt;]*&gt;/g, " ").replace(/\s+/g, " ").trim();
+}
+
+const provider_message_id =
+  $json.id ||
+  $json.messageId ||
+  $json.internalId ||
+  $json.threadId ||
+  $json.historyId ||
+  "";
+
+const from =
+  $json.from?.email ||
+  $json.from ||
+  $json.sender ||
+  $json.headers?.From ||
+  "";
+
+const subject =
+  $json.subject ||
+  $json.headers?.Subject ||
+  "";
+
+const bodyPlain =
+  $json.textPlain ||
+  $json.text ||
+  $json.body ||
+  $json.snippet ||
+  "";
+
+const bodyHtml = $json.textHtml || $json.html || "";
+
+const bodyText = bodyPlain && String(bodyPlain).trim().length &gt; 0
+  ? String(bodyPlain).trim()
+  : stripHtml(bodyHtml);
+
+const email_text = `From: ${from}\nSubject: ${subject}\n\n${bodyText}`.trim();
+
+return {
+  json: {
+    provider_message_id,
+    email_text,
+  },
+};</pre>
+
+          <p class="note">
+            After you click “Execute workflow”, open the Code node output and confirm you see
+            <span class="mono">provider_message_id</span> and <span class="mono">email_text</span>.
+          </p>
+
+          <p><strong>Node 3: LLM Call</strong></p>
+          <ul>
+            <li>Use HTTP Request (or OpenAI node) to send <span class="mono">email_text</span>.</li>
+            <li>Enforce strict JSON output matching the Prompt Contract section.</li>
+          </ul>
+
+          <p><strong>Node 4+: Airtable Update</strong></p>
+          <ul>
+            <li>Find/Create the quote row by <span class="mono">QuoteNumber</span>.</li>
+            <li>Update the stage-name column(s) with the returned <span class="mono">cell_text</span>.</li>
+            <li>Recompute <span class="mono">CurrentStage</span> and <span class="mono">FinalStatus</span>.</li>
+            <li>Set <span class="mono">ReceivedAt</span> on first insert; set <span class="mono">ClosedAt</span> once when closed.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="cumulative" style="margin-top: 14px">
+        <h2>
+          Cumulative Updates (Core Behavior)
+          <span class="status done">locked</span>
+        </h2>
+        <div class="body">
+          <p>
+            The dashboard is a cumulative tracker. Each new email may update only some stages. The system
+            must <strong>never create duplicate quote rows</strong> and must <strong>never delete prior stage details</strong>.
+            Instead, it merges/append updates over time.
+          </p>
+
+          <p><strong>Rules</strong></p>
+          <ul>
+            <li>
+              <strong>Single row per quote</strong>: identify the quote (quote # / inquiry #) and always upsert
+              into the same Airtable record keyed by <span class="mono">QuoteNumber</span>.
+            </li>
+            <li>
+              <strong>Partial updates are normal</strong>: an email can update 1 stage, many stages, or none.
+              Only touched stages should change.
+            </li>
+            <li>
+              <strong>Don’t overwrite with empties</strong>: if an update does not mention a stage, do nothing to that
+              stage column (leave existing text untouched).
+            </li>
+            <li>
+              <strong>Append instead of replace (default)</strong>: when a stage already has content and a new email adds more,
+              append the new text under a timestamp divider (unless it is clearly a correction that should replace).
+            </li>
+            <li>
+              <strong>No double-processing</strong>: use <span class="mono">provider_message_id</span> for dedupe (store in n8n
+              workflow static data or in a hidden Airtable field like <span class="mono">SeenMessageIds</span>).
+            </li>
+          </ul>
+
+          <p><strong>Implementation change required in n8n</strong></p>
+          <ul>
+            <li>
+              Before calling the LLM, fetch the existing Airtable row for this quote (if it exists), and include a snapshot of
+              current stage cell contents in the LLM prompt. This makes the model produce a <strong>delta</strong> instead of
+              rewriting.
+            </li>
+            <li>
+              After LLM returns <span class="mono">stage_updates[]</span>, run a merge step that combines:
+              <span class="mono">existing_cell_text</span> + <span class="mono">new_cell_text</span>.
+            </li>
+          </ul>
+
+          <p><strong>Recommended LLM output for cumulative merging</strong></p>
+          <pre>{
+  "primary_quote_identifier": "INQ 104892",
+  "stage_updates": [
+    {
+      "stage_name": "Inquiry & Lead Capture",
+      "operation": "append",
+      "cell_text": "✅ Received pallet freight request from Chicago IL to Dallas; 6 pallets..."
+    }
+  ]
+}</pre>
+          <p class="note">
+            The prompt can evolve, but the system behavior is stable: only update stages returned by the LLM, and preserve existing
+            stage text by default (append with timestamp).
           </p>
         </div>
       </section>
