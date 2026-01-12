@@ -1,0 +1,1334 @@
+{
+  "name": "Dashboard",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        -64
+      ],
+      "id": "1f6e1589-a395-4614-90cd-980271d9d5a6",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "89Lnt3Am5YlYa0bQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=You are an expert information extraction system for shipping container sales operations.\n\nYou will receive a single variable containing a full email thread. The newest email is at the top. The oldest email is at the bottom. Treat the entire thread as one continuous timeline.\n\nYour job is to read the entire thread from top to bottom and extract a complete, structured, normalized record of everything that happened across the full sales lifecycle.\n\nDo not stop at the most recent email.\nDo not ignore older messages.\nDo not assume missing information.\nPrefer explicit facts only.\n\nIf the same field appears multiple times with different values, keep the latest confirmed value and log the conflict.\n\n---\n\n## CORE EXTRACTION OBJECTIVES\n\nYou must extract:\n\n1. All quote identifiers found anywhere in the thread\n2. All pipeline stage updates that occurred anywhere in the thread\n3. All relevant data elements for each stage\n4. A complete normalized record across the entire lifecycle\n\n---\n\n## NON NEGOTIABLE READING RULES\n\n1. Read the entire thread from top to bottom\n2. Treat the thread as a timeline\n3. Extract info even if it appears only once in older emails\n4. Prefer explicit facts over assumptions\n5. Keep latest confirmed values and log earlier values as events\n\n---\n\n## IDENTIFIER EXTRACTION RULES\n\nQuote identifiers\n• Numeric only\n• 4 to 12 digits\n• Can appear in subject or body\n• Extract digits only\n\nAlso extract other numeric identifiers:\n• PO numbers\n• Invoice numbers\n• Tracking numbers\n• Release document IDs\n• Container serial numbers\n• Chassis IDs\n\n---\n\n## PIPELINE STAGES (USE EXACT NAMES)\n\n1 Inquiry & Lead Capture\n2 Research & Discovery\n3 Quotation Preparation\n4 Quote Approval\n5 Purchase Order Received\n6 Order Processing\n7 Invoicing\n8 Payment Received\n9 Release Sent\n10 Release Received\n11 Delivery Preparation\n12 Delivery Set\n13 Delivery Confirmed\n14 Post Delivery Follow up\n\n---\n\n## STAGE DETECTION RULES\n\nA stage is updated only when there is clear action evidence, such as:\nsent, received, approved, paid, signed, scheduled, dispatched, delivered\n\nIf multiple stages occur in one email, capture all.\n\nIf PO is confirmed, Quote Approval should be included unless explicitly contradicted.\n\n---\n\n## STAGE SPECIFIC DATA FIELDS\n\nExtract only what exists. Leave blanks if missing.\n\nInquiry & Lead Capture\ncustomer_name\ncustomer_company\ncustomer_email\nphone\nlead_source\nrequest_summary\nurgency\nrequested_quote_date\n\nResearch & Discovery\ncontainer_type\ncontainer_size\nquantity\ncondition\nmodifications\npickup_city_state\ndelivery_city_state\ndelivery_address\npickup_address\ndesired_delivery_window\naccess_constraints\nweight\ncommodity\nspecial_requirements\n\nQuotation Preparation\nquote_identifier\nquote_date_sent\nquoted_amount\nquoted_currency\nline_items\nfreight_cost\ntaxes_fees\npayment_terms\nquote_expiration\nvalidity_notes\n\nQuote Approval\napproval_date\napproval_phrase\napproved_by\nnegotiated_changes\nfinal_amount\n\nPurchase Order Received\npo_number\npo_date\npo_amount\npo_attachment_mentioned\npo_received_date\ndiscrepancies_notes\n\nOrder Processing\norder_number\ninternal_status\ninventory_reserved\ncontainer_ids\nyard_location\ndispatch_team\nreadiness_date\n\nInvoicing\ninvoice_number\ninvoice_date_sent\ninvoice_amount\ndue_date\npayment_instructions\ninvoice_attachment_mentioned\n\nPayment Received\npayment_date\npayment_amount\npayment_method\npayment_reference\nbalance_due\nconfirmation_sender\n\nRelease Sent\nrelease_sent_date\nrelease_document_type\nrelease_recipient\nsignature_required\nrelease_attachment_mentioned\n\nRelease Received\nrelease_received_date\nsigned_by\nsignature_status\napproval_notes\n\nDelivery Preparation\ncarrier\ndriver_name\npickup_scheduled_date\ndelivery_scheduled_date\nappointment_required\ndocuments_ready\nsafety_requirements\n\nDelivery Set\ntracking_number\ntracking_link_if_present\npickup_actual_date\nin_transit_status\neta\ncarrier_updates\n\nDelivery Confirmed\ndelivered_date\nreceived_by\nproof_of_delivery_mentioned\ndamage_notes\ndiscrepancies\n\nPost Delivery Follow up\nfollowup_date\nsatisfaction_status\nopen_issues\nresolution_actions\ncloseout_confirmation\n\n---\n\n## CRITICAL HEURISTICS\n\n1. Quotes or estimates belong to Quotation Preparation unless an invoice is explicitly sent\n2. Mention of an invoice without sending or attachment does not create an Invoicing event\n3. Tracking implies Delivery Set only if shipment has been dispatched or picked up\n4. Delivery Confirmed requires delivered or received language\n\n---\n\n## OUTPUT REQUIREMENTS\n\nReturn ONLY valid JSON.\nNo markdown.\nNo commentary.\n\nInclude three layers:\n\nA) Identifiers summary\nB) Stage updates timeline\nC) Normalized consolidated record\n\n---\n\n## TIMELINE EVENT REQUIREMENTS\n\nEach stage update must include:\n\nstage_name\nevent_date\nevidence_text\nextracted_fields\nsource_position (top, middle, bottom)\n\n---\n\n## COMPLETENESS RULES\n\n1. Attempt extraction for every stage in normalized_fields\n2. Include every stage that has evidence in stage_updates\n3. Log conflicts if values differ\n\n---\n\n## JSON SCHEMA\n\n{\n\"primary_quote_identifier\": \"\",\n\"all_quote_identifiers\": [],\n\"other_identifiers\": {\n\"po_numbers\": [],\n\"invoice_numbers\": [],\n\"tracking_numbers\": [],\n\"release_doc_ids\": [],\n\"container_ids\": []\n},\n\"stage_updates\": [\n{\n\"stage_name\": \"\",\n\"event_date\": \"\",\n\"evidence_text\": \"\",\n\"extracted_fields\": {},\n\"source_position\": \"\"\n}\n],\n\"normalized_fields\": {\n\"Inquiry & Lead Capture\": {},\n\"Research & Discovery\": {},\n\"Quotation Preparation\": {},\n\"Quote Approval\": {},\n\"Purchase Order Received\": {},\n\"Order Processing\": {},\n\"Invoicing\": {},\n\"Payment Received\": {},\n\"Release Sent\": {},\n\"Release Received\": {},\n\"Delivery Preparation\": {},\n\"Delivery Set\": {},\n\"Delivery Confirmed\": {},\n\"Post Delivery Follow up\": {}\n},\n\"conflicts\": [\n{\n\"field\": \"\",\n\"values_found\": [],\n\"resolution_rule_used\": \"\"\n}\n],\n\"missing_but_expected\": []\n}\n\n---\n\n## EMAIL_THREAD_TEXT\n\n{{ $('Build Email Packet').item.json.email_text }}\n"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        672,
+        -64
+      ],
+      "id": "915d39ad-e5ee-4426-9574-50ab81aa2f4b",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "46Rzz5LkZdzrTA0u",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9baee32e-aeea-4a1d-ac2c-edff718bc8ff",
+              "leftValue": "={{ $json.stop }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1248,
+        -64
+      ],
+      "id": "47beb56b-8021-49aa-afa9-37f6eba0b6b5",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// n8n Code node (Run once for each item)\n\nfunction stripHtml(html) {\n  return String(html || \"\").replace(/<[^>]*>/g, \" \").replace(/\\s+/g, \" \").trim();\n}\n\nconst provider_message_id =\n  $json.id ||\n  $json.messageId ||\n  $json.internalId ||\n  $json.threadId ||\n  $json.historyId;\n\nconst from =\n  $json.From ||\n  $json.from?.email ||\n  $json.from ||\n  $json.sender ||\n  \"\";\n\nconst subject =\n  $json.Subject ||\n  $json.subject ||\n  \"\";\n\nconst bodyPlain =\n  $json.textPlain ||\n  $json.text ||\n  $json.body ||\n  $json.snippet ||\n  \"\";\n\nconst bodyHtml = $json.textHtml || $json.html || \"\";\n\nconst bodyText = bodyPlain && String(bodyPlain).trim().length > 0\n  ? String(bodyPlain).trim()\n  : stripHtml(bodyHtml);\n\nconst email_text = `From: ${from}\\nSubject: ${subject}\\n\\n${bodyText}`.trim();\n\nreturn {\n  json: {\n    provider_message_id: provider_message_id || \"\",\n    email_text,\n  },\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -64
+      ],
+      "id": "b311d191-2757-4bf7-9c7f-ec867e2e6fd2",
+      "name": "Build Email Packet"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Always output primary_quote_identifier so IF can use it\n\nconst raw = $json.output?.[0]?.content?.[0]?.text;\n\nif (!raw) {\n  return {\n    json: {\n      primary_quote_identifier: \"\",\n      stage_updates: [],\n      stop: true,\n      reason: \"No OpenAI text output found\",\n    },\n  };\n}\n\nlet parsed;\ntry {\n  parsed = JSON.parse(raw);\n} catch (e) {\n  return {\n    json: {\n      primary_quote_identifier: \"\",\n      stage_updates: [],\n      stop: true,\n      reason: \"OpenAI output was not valid JSON\",\n      raw,\n    },\n  };\n}\n\nconst quote = (parsed.primary_quote_identifier || \"\").trim();\nconst stage_updates = Array.isArray(parsed.stage_updates) ? parsed.stage_updates : [];\n\nreturn {\n  json: {\n    primary_quote_identifier: quote,\n    stage_updates,\n    stop: !quote,\n    reason: quote ? \"\" : \"No quote identifier found in email\",\n    raw_json: parsed,\n    provider_message_id: $node[\"Build Email Packet\"].json.provider_message_id || \"\",\n  },\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        -64
+      ],
+      "id": "6799c683-c2a0-4617-be05-262ed83a2cbb",
+      "name": "Parse LLM JSON"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "appSthipDsv0DL7Lh",
+          "mode": "list",
+          "cachedResultName": "ProBox Sales Dashboard",
+          "cachedResultUrl": "https://airtable.com/appSthipDsv0DL7Lh"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl9u7yZXjIkGvuSM",
+          "mode": "list",
+          "cachedResultName": "Quotes",
+          "cachedResultUrl": "https://airtable.com/appSthipDsv0DL7Lh/tbl9u7yZXjIkGvuSM"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "QuoteNumber": "={{ $('Parse LLM JSON').item.json.primary_quote_identifier }}",
+            "CurrentStage": "={{ $json.CurrentStage }}",
+            "LastUpdatedAt": "={{ $json.LastUpdatedAt }}",
+            "FinalStatus": "={{ $json.FinalStatus }}"
+          },
+          "matchingColumns": [
+            "QuoteNumber"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "QuoteNumber",
+              "displayName": "QuoteNumber",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Customer",
+              "displayName": "Customer",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ReceivedAt",
+              "displayName": "ReceivedAt",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "LastUpdatedAt",
+              "displayName": "LastUpdatedAt",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "FinalStatus",
+              "displayName": "FinalStatus",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "CurrentStage",
+              "displayName": "CurrentStage",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ClosedAt",
+              "displayName": "ClosedAt",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Inquiry & Lead Capture",
+              "displayName": "Inquiry & Lead Capture",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Research & Discovery",
+              "displayName": "Research & Discovery",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Quotation Preparation",
+              "displayName": "Quotation Preparation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Quote Approval",
+              "displayName": "Quote Approval",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "PO Received ",
+              "displayName": "PO Received ",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Order Processing",
+              "displayName": "Order Processing",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Invoicing",
+              "displayName": "Invoicing",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Payment Received",
+              "displayName": "Payment Received",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Release Sent",
+              "displayName": "Release Sent",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Release Received",
+              "displayName": "Release Received",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Delivery Preparation",
+              "displayName": "Delivery Preparation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Delivery Set",
+              "displayName": "Delivery Set",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Delivery Confirmed",
+              "displayName": "Delivery Confirmed",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Post-Delivery Follow-up",
+              "displayName": "Post-Delivery Follow-up",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        256
+      ],
+      "id": "895c06b4-88a1-4deb-964c-680358464c3e",
+      "name": "Create or update a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "NRSYJf8DM6u3JHEv",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Transform stage_updates[] into Airtable field mappings\n\nconst quoteNumber = ($json.primary_quote_identifier || \"\").trim();\nconst stageUpdates = Array.isArray($json.stage_updates) ? $json.stage_updates : [];\nconst now = new Date();\n\n// Map stage names from LLM to exact Airtable column names\nconst stageNameMap = {\n  \"Inquiry & Lead Capture\": \"Inquiry & Lead Capture\",\n  \"Research & Discovery\": \"Research & Discovery\",\n  \"Quotation Preparation\": \"Quotation Preparation\",\n  \"Quote Approval\": \"Quote Approval\",\n  \"PO Received\": \"PO Received\",\n  \"Order Processing\": \"Order Processing\",\n  \"Invoicing\": \"Invoicing\",\n  \"Payment Received\": \"Payment Received\",\n  \"Release Sent\": \"Release Sent\",\n  \"Release Received\": \"Release Received\",\n  \"Delivery Preparation\": \"Delivery Preparation\",\n  \"Delivery Set\": \"Delivery Set\",\n  \"Delivery Confirmed\": \"Delivery Confirmed\",\n  \"Post-Delivery Follow-up\": \"Post-Delivery Follow-up\",\n};\n\n// Build object for Airtable (only include fields we're updating)\nconst airtableFields = {\n  QuoteNumber: quoteNumber,\n  LastUpdatedAt: now.toISOString(),\n};\n\n// Process each stage update from LLM\nlet highestStageNumber = 0;\nconst stageNumbers = {\n  \"Inquiry & Lead Capture\": 1,\n  \"Research & Discovery\": 2,\n  \"Quotation Preparation\": 3,\n  \"Quote Approval\": 4,\n  \"PO Received\": 5,\n  \"Order Processing\": 6,\n  \"Invoicing\": 7,\n  \"Payment Received\": 8,\n  \"Release Sent\": 9,\n  \"Release Received\": 10,\n  \"Delivery Preparation\": 11,\n  \"Delivery Set\": 12,\n  \"Delivery Confirmed\": 13,\n  \"Post-Delivery Follow-up\": 14,\n};\n\nstageUpdates.forEach((update) => {\n  const stageName = (update.stage_name || \"\").trim();\n  const cellText = (update.cell_text || \"\").trim();\n\n  // Find matching Airtable column name\n  const airtableColumnName = stageNameMap[stageName];\n  if (airtableColumnName && cellText) {\n    airtableFields[airtableColumnName] = cellText;\n\n    // Track highest stage number\n    const stageNum = stageNumbers[stageName];\n    if (stageNum && stageNum > highestStageNumber) {\n      highestStageNumber = stageNum;\n    }\n  }\n});\n\n// Set CurrentStage (highest stage that has content)\nif (highestStageNumber > 0) {\nairtableFields.CurrentStage = Number(highestStageNumber);\n}\n\n// For FinalStatus: we'll default to \"open\" for now\n// (We can't check \"all 14 done\" without reading existing record first)\n// We'll handle this with a daily sweep workflow later\nairtableFields.FinalStatus = \"open\";\n\n// Set ReceivedAt for new records (will be overwritten by Merge/Append if record exists)\nairtableFields.ReceivedAt = now.toISOString();\n\n// Ensure ALL 14 stage fields are present in output (even if empty)\nconst allStageNames = [\n  \"Inquiry & Lead Capture\",\n  \"Research & Discovery\",\n  \"Quotation Preparation\",\n  \"Quote Approval\",\n  \"PO Received\",\n  \"Order Processing\",\n  \"Invoicing\",\n  \"Payment Received\",\n  \"Release Sent\",\n  \"Release Received\",\n  \"Delivery Preparation\",\n  \"Delivery Set\",\n  \"Delivery Confirmed\",\n  \"Post-Delivery Follow-up\",\n];\n\nallStageNames.forEach((stageName) => {\n  if (!airtableFields.hasOwnProperty(stageName)) {\n    airtableFields[stageName] = \"\"; // Empty string if not set by LLM\n  }\n});\n\nreturn {\n  json: airtableFields,\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        -64
+      ],
+      "id": "588459a6-7777-45f3-9d03-a8d82bb4205c",
+      "name": "Prepare Airtable Fields "
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appSthipDsv0DL7Lh",
+          "mode": "list",
+          "cachedResultName": "ProBox Sales Dashboard",
+          "cachedResultUrl": "https://airtable.com/appSthipDsv0DL7Lh"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl9u7yZXjIkGvuSM",
+          "mode": "list",
+          "cachedResultName": "Quotes",
+          "cachedResultUrl": "https://airtable.com/appSthipDsv0DL7Lh/tbl9u7yZXjIkGvuSM"
+        },
+        "filterByFormula": "=  {QuoteNumber} = \"{{ $('Prepare Airtable Fields ').item.json.QuoteNumber }}\"",
+        "returnAll": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1696,
+        -64
+      ],
+      "id": "c8673bcc-1bf6-40a3-87c1-5a8f8af1d270",
+      "name": "Search records",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "NRSYJf8DM6u3JHEv",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Merge/append stage updates into existing Airtable record fields\n\nconst nowIso = new Date().toISOString().slice(0, 16).replace(\"T\", \" \"); // \"YYYY-MM-DD HH:MM\"\n\nconst quoteNumber = ($node[\"Parse LLM JSON\"].json.primary_quote_identifier || \"\").trim();\nconst stageUpdates = Array.isArray($node[\"Parse LLM JSON\"].json.stage_updates)\n  ? $node[\"Parse LLM JSON\"].json.stage_updates\n  : [];\n\n// Search records node returns an array; first record is the existing row\nconst found = Array.isArray($json) ? $json : [$json];\nconst existingRecord = found[0] || null;\n\nconst existingFields = existingRecord?.fields || {};\nconst existingId = existingRecord?.id || null;\n\n// Helper: append with divider, without duplicating exact same text\nfunction mergeCell(existingText, newText) {\n  const oldTxt = String(existingText || \"\").trim();\n  const addTxt = String(newText || \"\").trim();\n  if (!addTxt) return oldTxt;\n  if (!oldTxt) return addTxt;\n\n  // Avoid duplicate append if same text already present\n  if (oldTxt.includes(addTxt)) return oldTxt;\n\n  return `${oldTxt}\\n\\n--- ${nowIso} ---\\n${addTxt}`;\n}\n\n// Map stage names to Airtable column names\nconst stageNameMap = {\n  \"Inquiry & Lead Capture\": \"Inquiry & Lead Capture\",\n  \"Research & Discovery\": \"Research & Discovery\",\n  \"Quotation Preparation\": \"Quotation Preparation\",\n  \"Quote Approval\": \"Quote Approval\",\n  \"PO Received\": \"PO Received\",\n  \"Order Processing\": \"Order Processing\",\n  \"Invoicing\": \"Invoicing\",\n  \"Payment Received\": \"Payment Received\",\n  \"Release Sent\": \"Release Sent\",\n  \"Release Received\": \"Release Received\",\n  \"Delivery Preparation\": \"Delivery Preparation\",\n  \"Delivery Set\": \"Delivery Set\",\n  \"Delivery Confirmed\": \"Delivery Confirmed\",\n  \"Post-Delivery Follow-up\": \"Post-Delivery Follow-up\",\n};\n\n// Stage order for CurrentStage calculation\nconst stageNumbers = {\n  \"Inquiry & Lead Capture\": 1,\n  \"Research & Discovery\": 2,\n  \"Quotation Preparation\": 3,\n  \"Quote Approval\": 4,\n  \"PO Received\": 5,\n  \"Order Processing\": 6,\n  \"Invoicing\": 7,\n  \"Payment Received\": 8,\n  \"Release Sent\": 9,\n  \"Release Received\": 10,\n  \"Delivery Preparation\": 11,\n  \"Delivery Set\": 12,\n  \"Delivery Confirmed\": 13,\n  \"Post-Delivery Follow-up\": 14,\n};\n\n// Build fields to write: start with existing fields, but only output changed ones\nconst fieldsToWrite = {\n  QuoteNumber: quoteNumber,\n  LastUpdatedAt: new Date().toISOString(),\n};\n\n// Merge stage updates\nlet highestStage = Number(existingFields.CurrentStage || 0);\n\nfor (const upd of stageUpdates) {\n  const stageName = String(upd.stage_name || \"\").trim();\n  const cellText = String(upd.cell_text || \"\").trim();\n  const colName = stageNameMap[stageName];\n\n  if (!colName || !cellText) continue;\n\n  const merged = mergeCell(existingFields[colName], cellText);\n  fieldsToWrite[colName] = merged;\n\n  const n = stageNumbers[stageName] || 0;\n  if (n > highestStage) highestStage = n;\n}\n\n// Compute CurrentStage\nfieldsToWrite.CurrentStage = Number(highestStage);\n\n// FinalStatus rule (simple version):\n// - closed if all 14 stage columns have some text\n// - else just_received if ReceivedAt within 2 days\n// - else open\nconst allStageCols = Object.values(stageNameMap);\nconst allDone = allStageCols.every((c) => String(fieldsToWrite[c] ?? existingFields[c] ?? \"\").trim().length > 0);\n\nif (allDone) {\n  fieldsToWrite.FinalStatus = \"closed\";\n  if (!existingFields.ClosedAt) fieldsToWrite.ClosedAt = new Date().toISOString();\n} else {\n  const receivedAt = existingFields.ReceivedAt ? new Date(existingFields.ReceivedAt) : null;\n  if (receivedAt && Date.now() - receivedAt.getTime() < 2 * 24 * 60 * 60 * 1000) {\n    fieldsToWrite.FinalStatus = \"just_received\";\n  } else {\n    fieldsToWrite.FinalStatus = \"open\";\n  }\n}\n\n// Ensure ReceivedAt is set for existing missing cases\nif (!existingFields.ReceivedAt) {\n  fieldsToWrite.ReceivedAt = new Date().toISOString();\n}\n\nreturn {\n  json: {\n    recordId: existingId,      // used by Update record\n    fields: fieldsToWrite,     // used by Airtable write node\n  },\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2368,
+        32
+      ],
+      "id": "4154d895-42ec-4016-b6cf-471027a0db72",
+      "name": "Merge/Append Stage Updates"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appSthipDsv0DL7Lh",
+          "mode": "list",
+          "cachedResultName": "ProBox Sales Dashboard",
+          "cachedResultUrl": "https://airtable.com/appSthipDsv0DL7Lh"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl9u7yZXjIkGvuSM",
+          "mode": "list",
+          "cachedResultName": "Quotes",
+          "cachedResultUrl": "https://airtable.com/appSthipDsv0DL7Lh/tbl9u7yZXjIkGvuSM"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.recordId }}",
+            "QuoteNumber": "={{ $json.fields.QuoteNumber }}",
+            "Customer": "=",
+            "LastUpdatedAt": "={{ $json.fields.LastUpdatedAt }}",
+            "FinalStatus": "={{ $json.fields.FinalStatus }}",
+            "CurrentStage": "={{ $json.fields.CurrentStage }}",
+            "ReceivedAt": "={{ $json.fields.ReceivedAt }}",
+            "Inquiry & Lead Capture": "={{ $json.fields['Inquiry & Lead Capture'] }}",
+            "Research & Discovery": "={{ $json.fields['Research & Discovery'] }}",
+            "Delivery Confirmed": "={{ $json.fields['Delivery Confirmed'] }}",
+            "Delivery Preparation": "={{ $json.fields['Delivery Preparation'] }}",
+            "Payment Received": "={{ $json.fields['Payment Received'] }}",
+            "Invoicing": "={{ $json.fields.Invoicing }}",
+            "Order Processing": "={{ $json.fields['Order Processing'] }}",
+            "PO Received ": "={{ $json.fields['PO Received'] }}",
+            "Quote Approval": "={{ $json.fields['Quote Approval'] }}",
+            "Quotation Preparation": "={{ $json.fields['Quotation Preparation'] }}",
+            "Delivery Set": "={{ $json.fields['Delivery Set'] }}",
+            "Release Sent": "={{ $json.fields['Release Sent'] }}",
+            "Release Received": "={{ $json.fields['Release Received'] }}",
+            "Post-Delivery Follow-up": "={{ $json.fields['Post-Delivery Follow-up'] }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "QuoteNumber",
+              "displayName": "QuoteNumber",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Customer",
+              "displayName": "Customer",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ReceivedAt",
+              "displayName": "ReceivedAt",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "LastUpdatedAt",
+              "displayName": "LastUpdatedAt",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "FinalStatus",
+              "displayName": "FinalStatus",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "CurrentStage",
+              "displayName": "CurrentStage",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ClosedAt",
+              "displayName": "ClosedAt",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Inquiry & Lead Capture",
+              "displayName": "Inquiry & Lead Capture",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Research & Discovery",
+              "displayName": "Research & Discovery",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Quotation Preparation",
+              "displayName": "Quotation Preparation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Quote Approval",
+              "displayName": "Quote Approval",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "PO Received ",
+              "displayName": "PO Received ",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Order Processing",
+              "displayName": "Order Processing",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Invoicing",
+              "displayName": "Invoicing",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Payment Received",
+              "displayName": "Payment Received",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Release Sent",
+              "displayName": "Release Sent",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Release Received",
+              "displayName": "Release Received",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Delivery Preparation",
+              "displayName": "Delivery Preparation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Delivery Set",
+              "displayName": "Delivery Set",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Delivery Confirmed",
+              "displayName": "Delivery Confirmed",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Post-Delivery Follow-up",
+              "displayName": "Post-Delivery Follow-up",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2592,
+        32
+      ],
+      "id": "cda15c08-c48a-4b6c-9794-88d34fafdc60",
+      "name": "Update Quote ",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "NRSYJf8DM6u3JHEv",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appSthipDsv0DL7Lh",
+          "mode": "list",
+          "cachedResultName": "ProBox Sales Dashboard",
+          "cachedResultUrl": "https://airtable.com/appSthipDsv0DL7Lh"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl9u7yZXjIkGvuSM",
+          "mode": "list",
+          "cachedResultName": "Quotes",
+          "cachedResultUrl": "https://airtable.com/appSthipDsv0DL7Lh/tbl9u7yZXjIkGvuSM"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "QuoteNumber": "={{ $('Prepare Airtable Fields ').item.json.QuoteNumber }}",
+            "LastUpdatedAt": "={{ $('Prepare Airtable Fields ').item.json.LastUpdatedAt }}",
+            "ReceivedAt": "={{ $('Prepare Airtable Fields ').item.json.ReceivedAt }}",
+            "CurrentStage": "={{ $('Prepare Airtable Fields ').item.json.CurrentStage }}",
+            "FinalStatus": "={{ $('Prepare Airtable Fields ').item.json.FinalStatus }}",
+            "Inquiry & Lead Capture": "={{ $('Prepare Airtable Fields ').item.json['Inquiry & Lead Capture'] }}",
+            "Research & Discovery": "={{ $('Prepare Airtable Fields ').item.json['Research & Discovery'] }}",
+            "Quote Approval": "={{ $('Prepare Airtable Fields ').item.json['Quote Approval'] }}",
+            "Quotation Preparation": "={{ $('Prepare Airtable Fields ').item.json['Quotation Preparation'] }}",
+            "PO Received ": "={{ $('Prepare Airtable Fields ').item.json['PO Received'] }}",
+            "Invoicing": "={{ $('Prepare Airtable Fields ').item.json.Invoicing }}",
+            "Order Processing": "={{ $('Prepare Airtable Fields ').item.json['Order Processing'] }}",
+            "Release Sent": "={{ $('Prepare Airtable Fields ').item.json['Release Sent'] }}",
+            "Payment Received": "={{ $('Prepare Airtable Fields ').item.json['Payment Received'] }}",
+            "Release Received": "={{ $('Prepare Airtable Fields ').item.json['Release Received'] }}",
+            "Delivery Set": "={{ $('Prepare Airtable Fields ').item.json['Delivery Set'] }}",
+            "Delivery Preparation": "={{ $('Prepare Airtable Fields ').item.json['Delivery Preparation'] }}",
+            "Delivery Confirmed": "={{ $('Prepare Airtable Fields ').item.json['Delivery Confirmed'] }}",
+            "Post-Delivery Follow-up": "={{ $('Prepare Airtable Fields ').item.json['Post-Delivery Follow-up'] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "QuoteNumber",
+              "displayName": "QuoteNumber",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Customer",
+              "displayName": "Customer",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ReceivedAt",
+              "displayName": "ReceivedAt",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "LastUpdatedAt",
+              "displayName": "LastUpdatedAt",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "FinalStatus",
+              "displayName": "FinalStatus",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "CurrentStage",
+              "displayName": "CurrentStage",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ClosedAt",
+              "displayName": "ClosedAt",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Inquiry & Lead Capture",
+              "displayName": "Inquiry & Lead Capture",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Research & Discovery",
+              "displayName": "Research & Discovery",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Quotation Preparation",
+              "displayName": "Quotation Preparation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Quote Approval",
+              "displayName": "Quote Approval",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "PO Received ",
+              "displayName": "PO Received ",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Order Processing",
+              "displayName": "Order Processing",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Invoicing",
+              "displayName": "Invoicing",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Payment Received",
+              "displayName": "Payment Received",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Release Sent",
+              "displayName": "Release Sent",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Release Received",
+              "displayName": "Release Received",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Delivery Preparation",
+              "displayName": "Delivery Preparation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Delivery Set",
+              "displayName": "Delivery Set",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Delivery Confirmed",
+              "displayName": "Delivery Confirmed",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Post-Delivery Follow-up",
+              "displayName": "Post-Delivery Follow-up",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2592,
+        -160
+      ],
+      "id": "ab3a01c2-defd-4d10-8834-8eff47948397",
+      "name": "Create Quote",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "NRSYJf8DM6u3JHEv",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const provider_message_id = $json.provider_message_id || \"\";\n\n// For now, just pass through (we'll add dedupe check later)\nreturn {\n  json: {\n    provider_message_id: provider_message_id,\n    continue: true\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -64
+      ],
+      "id": "16fe751b-d24a-4608-a8d5-fc0b6cfb5001",
+      "name": "Check Dedupe"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const provider_message_id = $('Check Dedupe').item.json.provider_message_id|| \"\";\n\n// For now, just pass through (we'll add storage logic later)\nreturn {\n  json: {\n    provider_message_id: provider_message_id,\n    processed: true\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2816,
+        -64
+      ],
+      "id": "44315983-6e50-41b3-81f3-545d26d842e5",
+      "name": "Mark Processed"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "261539ad-ce81-42b1-aad6-07f303d055de",
+              "leftValue": "={{$json.id}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2144,
+        -64
+      ],
+      "id": "ba7f0955-2cc8-475f-86f0-288fde43c933",
+      "name": "Record Exists"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Preserve data from Prepare Airtable Fields when Search records finds nothing\n// Search records returns array of records: [{id: \"...\", fields: {...}}, ...]\n// When alwaysOutputData: true and nothing found, it returns the input data\n\nconsole.log(\"Preserve Fields - Input:\", JSON.stringify($json, null, 2));\n\n// Search records can return an array or a single item - always take first\nconst searchResults = Array.isArray($json) ? $json : [$json];\nconst searchRecord = searchResults[0] || null;\n\nconsole.log(\"Preserve Fields - searchRecord:\", JSON.stringify(searchRecord, null, 2));\nconsole.log(\"Preserve Fields - searchRecord.id:\", searchRecord?.id);\nconsole.log(\"Preserve Fields - typeof searchRecord?.id:\", typeof searchRecord?.id);\n\n// Check if this is an Airtable record (has id property that is a string starting with \"rec\")\n// Airtable records have structure: {id: \"rec...\", fields: {...}}\nconst isAirtableRecord = searchRecord && \n                         typeof searchRecord.id === 'string' && \n                         searchRecord.id.startsWith('rec');\n\nconsole.log(\"Preserve Fields - isAirtableRecord:\", isAirtableRecord);\n\nif (isAirtableRecord) {\n  // Record exists - return the full Airtable record structure\n  console.log(\"Preserve Fields - Returning Airtable record with id:\", searchRecord.id);\n  return {\n    json: searchRecord\n  };\n} else {\n  // No record found - Search records returned input data (from Prepare Airtable Fields)\n  // Use that data with explicit null id\n  const preparedData = searchRecord || {};\n  console.log(\"Preserve Fields - No record found, returning with id: null\");\n  return {\n    json: {\n      ...preparedData,\n      id: null // explicitly no id so Record Exists can check for empty\n    }\n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        -64
+      ],
+      "id": "ac821147-5b72-44a2-a2ec-ea147558c0a7",
+      "name": "Preserve Fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Email Packet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Parse LLM JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Email Packet": {
+      "main": [
+        [
+          {
+            "node": "Check Dedupe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse LLM JSON": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Prepare Airtable Fields ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Airtable Fields ": {
+      "main": [
+        [
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "Preserve Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge/Append Stage Updates": {
+      "main": [
+        [
+          {
+            "node": "Update Quote ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Dedupe": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Quote ": {
+      "main": [
+        [
+          {
+            "node": "Mark Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Quote": {
+      "main": [
+        [
+          {
+            "node": "Mark Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Exists": {
+      "main": [
+        [
+          {
+            "node": "Create Quote",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge/Append Stage Updates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preserve Fields": {
+      "main": [
+        [
+          {
+            "node": "Record Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "1a503133-3138-4251-ba0f-0f63b6d4c11f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7f51e4e3aab57ea0f88d745e799b864d5a59e50effaa3086e373db9c292a9733"
+  },
+  "id": "WTXSGKdPiZlmshGib9EfH",
+  "tags": []
+}

@@ -1,0 +1,411 @@
+{
+  "name": "Dashboard - Holistic v2",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "id": "schedule-trigger-1",
+      "name": "Schedule Trigger (Every 5 min)"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 50,
+        "filters": {
+          "q": "newer_than:5m"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [200, 0],
+      "id": "gmail-get-emails",
+      "name": "Get Emails Last 5 Minutes",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "89Lnt3Am5YlYa0bQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "list",
+        "base": {
+          "__rl": true,
+          "value": "appSthipDsv0DL7Lh",
+          "mode": "list",
+          "cachedResultName": "ProBox Sales Dashboard"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblProcessedEmails",
+          "mode": "list",
+          "cachedResultName": "ProcessedEmails"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [400, 0],
+      "id": "airtable-get-processed",
+      "name": "Get Processed Emails",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "NRSYJf8DM6u3JHEv",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Filter: Only keep emails that are NOT in ProcessedEmails table\n\nconst currentEmails = $input.all();\nconst processedRecords = $node[\"Get Processed Emails\"].json || [];\n\n// Build set of processed message IDs\nconst processedIds = new Set();\nprocessedRecords.forEach(record => {\n  const msgId = record.fields?.provider_message_id || record.fields?.ProviderMessageId || \"\";\n  if (msgId) processedIds.add(String(msgId).trim());\n});\n\n// Filter emails\nconst unprocessedEmails = currentEmails\n  .map(item => item.json)\n  .filter(email => {\n    const msgId = email.id || email.messageId || email.internalId || \"\";\n    return msgId && !processedIds.has(String(msgId).trim());\n  });\n\nreturn unprocessedEmails.map(email => ({ json: email }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 0],
+      "id": "filter-unprocessed",
+      "name": "Filter Unprocessed Emails"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Build Full Email Thread Packet\n// Fetch the ENTIRE email thread (all responses)\n\nfunction stripHtml(html) {\n  return String(html || \"\").replace(/<[^>]*>/g, \" \").replace(/\\s+/g, \" \").trim();\n}\n\nconst email = $json;\nconst threadId = email.threadId || email.thread_id || \"\";\nconst messageId = email.id || email.messageId || email.internalId || \"\";\n\n// Extract from current email\nconst from = email.from?.email || email.from || email.sender || email.headers?.From || \"\";\nconst subject = email.subject || email.headers?.Subject || \"\";\nconst bodyPlain = email.textPlain || email.text || email.body || email.snippet || \"\";\nconst bodyHtml = email.textHtml || email.html || \"\";\nconst bodyText = bodyPlain && String(bodyPlain).trim().length > 0\n  ? String(bodyPlain).trim()\n  : stripHtml(bodyHtml);\n\n// For now, use current email. In production, fetch full thread via Gmail API\n// TODO: Use Gmail API to fetch all messages in thread\nconst fullThreadText = `From: ${from}\\nSubject: ${subject}\\n\\n${bodyText}`.trim();\n\nreturn {\n  json: {\n    provider_message_id: messageId || \"\",\n    thread_id: threadId || \"\",\n    full_thread_text: fullThreadText,\n    email: email\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 0],
+      "id": "build-full-thread",
+      "name": "Build Full Thread Packet"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=You are an expert information extraction system for shipping container sales operations.\n\nYou will receive a full email thread. The newest email is at the top. The oldest email is at the bottom. Treat the entire thread as one continuous timeline.\n\nYour job is to read the ENTIRE thread from top to bottom and extract COMPREHENSIVE, structured data of everything that happened across the full sales lifecycle.\n\nCRITICAL: Extract ALL data - not just stage names. Extract all bullet points, all details, all fields mentioned anywhere in the thread.\n\n---\n\n## EXTRACTION REQUIREMENTS\n\n1. Quote identifiers (numeric only, 4-12 digits)\n2. ALL pipeline stage updates (which of the 14 stages are updated)\n3. COMPREHENSIVE data for each stage:\n   - Customer names, addresses, phone numbers\n   - PO numbers, invoice numbers, tracking numbers\n   - Dates, amounts, quantities, locations\n   - Special requirements, notes, attachments mentioned\n   - ALL bullet points, ALL details\n\n---\n\n## PIPELINE STAGES (USE EXACT NAMES)\n\n1. Inquiry & Lead Capture\n2. Research & Discovery\n3. Quotation Preparation\n4. Quote Approval\n5. PO Received\n6. Order Processing\n7. Invoicing\n8. Payment Received\n9. Release Sent\n10. Release Received\n11. Delivery Preparation\n12. Delivery Set\n13. Delivery Confirmed\n14. Post-Delivery Follow-up\n\n---\n\n## OUTPUT FORMAT\n\nReturn ONLY valid JSON (no markdown, no code blocks):\n\n{\n  \"primary_quote_identifier\": \"\",\n  \"comprehensive_data\": {\n    \"customer_name\": \"\",\n    \"customer_email\": \"\",\n    \"phone\": \"\",\n    \"po_number\": \"\",\n    \"invoice_number\": \"\",\n    \"tracking_number\": \"\",\n    \"amount\": \"\",\n    \"dates\": [],\n    \"locations\": [],\n    \"notes\": \"\",\n    \"all_details\": \"\"\n  },\n  \"stage_updates\": [\n    {\n      \"stage_name\": \"\",\n      \"cell_text\": \"\"\n    }\n  ]\n}\n\n---\n\n## EMAIL THREAD\n\n{{ $('Build Full Thread Packet').item.json.full_thread_text }}\n"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [1000, 0],
+      "id": "message-model",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "46Rzz5LkZdzrTA0u",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse LLM JSON\n\nconst raw = $json.output?.[0]?.content?.[0]?.text;\n\nif (!raw) {\n  return {\n    json: {\n      primary_quote_identifier: \"\",\n      comprehensive_data: {},\n      stage_updates: [],\n      stop: true,\n      reason: \"No OpenAI text output found\"\n    }\n  };\n}\n\nlet parsed;\ntry {\n  parsed = JSON.parse(raw);\n} catch (e) {\n  return {\n    json: {\n      primary_quote_identifier: \"\",\n      comprehensive_data: {},\n      stage_updates: [],\n      stop: true,\n      reason: \"OpenAI output was not valid JSON\",\n      raw\n    }\n  };\n}\n\nconst quote = (parsed.primary_quote_identifier || \"\").trim();\nconst comprehensiveData = parsed.comprehensive_data || {};\nconst stageUpdates = Array.isArray(parsed.stage_updates) ? parsed.stage_updates : [];\n\nreturn {\n  json: {\n    primary_quote_identifier: quote,\n    comprehensive_data: comprehensiveData,\n    stage_updates: stageUpdates,\n    stop: !quote,\n    reason: quote ? \"\" : \"No quote identifier found in email\",\n    provider_message_id: $node[\"Build Full Thread Packet\"].json.provider_message_id || \"\"\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 0],
+      "id": "parse-llm-json",
+      "name": "Parse LLM JSON"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "if-stop",
+              "leftValue": "={{ $json.stop }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1400, 0],
+      "id": "if-stop",
+      "name": "If Stop"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appSthipDsv0DL7Lh",
+          "mode": "list",
+          "cachedResultName": "ProBox Sales Dashboard"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl9u7yZXjIkGvuSM",
+          "mode": "list",
+          "cachedResultName": "Quotes"
+        },
+        "filterByFormula": "={QuoteNumber} = \"{{ $('Parse LLM JSON').item.json.primary_quote_identifier }}\"",
+        "returnAll": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [1600, 0],
+      "id": "search-quote",
+      "name": "Search Quote",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "NRSYJf8DM6u3JHEv",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Check Existing Data & Merge\n// Only add missing data, never overwrite existing\n\nconst nowIso = new Date().toISOString().slice(0, 16).replace(\"T\", \" \");\n\nconst quoteNumber = ($node[\"Parse LLM JSON\"].json.primary_quote_identifier || \"\").trim();\nconst comprehensiveData = $node[\"Parse LLM JSON\"].json.comprehensive_data || {};\nconst stageUpdates = Array.isArray($node[\"Parse LLM JSON\"].json.stage_updates) ? $node[\"Parse LLM JSON\"].json.stage_updates : [];\n\n// Search returns array; first record is existing row\nconst found = Array.isArray($json) ? $json : [$json];\nconst existingRecord = found[0] || null;\nconst existingFields = existingRecord?.fields || {};\nconst existingId = existingRecord?.id || null;\n\n// Helper: append with divider, avoid exact duplicates\nfunction mergeCell(existingText, newText) {\n  const oldTxt = String(existingText || \"\").trim();\n  const addTxt = String(newText || \"\").trim();\n  if (!addTxt) return oldTxt;\n  if (!oldTxt) return addTxt;\n  if (oldTxt.includes(addTxt)) return oldTxt; // Avoid duplicate\n  return `${oldTxt}\\n\\n--- ${nowIso} ---\\n${addTxt}`;\n}\n\n// Stage name map\nconst stageNameMap = {\n  \"Inquiry & Lead Capture\": \"Inquiry & Lead Capture\",\n  \"Research & Discovery\": \"Research & Discovery\",\n  \"Quotation Preparation\": \"Quotation Preparation\",\n  \"Quote Approval\": \"Quote Approval\",\n  \"PO Received\": \"PO Received\",\n  \"Order Processing\": \"Order Processing\",\n  \"Invoicing\": \"Invoicing\",\n  \"Payment Received\": \"Payment Received\",\n  \"Release Sent\": \"Release Sent\",\n  \"Release Received\": \"Release Received\",\n  \"Delivery Preparation\": \"Delivery Preparation\",\n  \"Delivery Set\": \"Delivery Set\",\n  \"Delivery Confirmed\": \"Delivery Confirmed\",\n  \"Post-Delivery Follow-up\": \"Post-Delivery Follow-up\"\n};\n\nconst stageNumbers = {\n  \"Inquiry & Lead Capture\": 1,\n  \"Research & Discovery\": 2,\n  \"Quotation Preparation\": 3,\n  \"Quote Approval\": 4,\n  \"PO Received\": 5,\n  \"Order Processing\": 6,\n  \"Invoicing\": 7,\n  \"Payment Received\": 8,\n  \"Release Sent\": 9,\n  \"Release Received\": 10,\n  \"Delivery Preparation\": 11,\n  \"Delivery Set\": 12,\n  \"Delivery Confirmed\": 13,\n  \"Post-Delivery Follow-up\": 14\n};\n\n// Build fields to write\nconst fieldsToWrite = {\n  QuoteNumber: quoteNumber,\n  LastUpdatedAt: new Date().toISOString()\n};\n\n// Add comprehensive data ONLY if missing in existing record\nObject.keys(comprehensiveData).forEach(key => {\n  const existingValue = existingFields[key];\n  const newValue = comprehensiveData[key];\n  if (!existingValue && newValue) {\n    fieldsToWrite[key] = String(newValue).trim();\n  }\n});\n\n// Merge stage updates\nlet highestStage = Number(existingFields.CurrentStage || 0);\nfor (const upd of stageUpdates) {\n  const stageName = String(upd.stage_name || \"\").trim();\n  const cellText = String(upd.cell_text || \"\").trim();\n  const colName = stageNameMap[stageName];\n  if (!colName || !cellText) continue;\n  const merged = mergeCell(existingFields[colName], cellText);\n  fieldsToWrite[colName] = merged;\n  const n = stageNumbers[stageName] || 0;\n  if (n > highestStage) highestStage = n;\n}\n\nfieldsToWrite.CurrentStage = Number(highestStage);\n\n// FinalStatus\nconst allStageCols = Object.values(stageNameMap);\nconst allDone = allStageCols.every((c) => String(fieldsToWrite[c] ?? existingFields[c] ?? \"\").trim().length > 0);\n\nif (allDone) {\n  fieldsToWrite.FinalStatus = \"closed\";\n  if (!existingFields.ClosedAt) fieldsToWrite.ClosedAt = new Date().toISOString();\n} else {\n  const receivedAt = existingFields.ReceivedAt ? new Date(existingFields.ReceivedAt) : null;\n  if (receivedAt && Date.now() - receivedAt.getTime() < 2 * 24 * 60 * 60 * 1000) {\n    fieldsToWrite.FinalStatus = \"just_received\";\n  } else {\n    fieldsToWrite.FinalStatus = \"open\";\n  }\n}\n\nif (!existingFields.ReceivedAt) {\n  fieldsToWrite.ReceivedAt = new Date().toISOString();\n}\n\nreturn {\n  json: {\n    recordId: existingId,\n    fields: fieldsToWrite,\n    provider_message_id: $node[\"Parse LLM JSON\"].json.provider_message_id || \"\",\n    quote_number: quoteNumber\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1800, 0],
+      "id": "check-merge",
+      "name": "Check Existing & Merge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "if-record-exists",
+              "leftValue": "={{ $json.recordId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [2000, 0],
+      "id": "if-record-exists",
+      "name": "Record Exists?"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appSthipDsv0DL7Lh",
+          "mode": "list",
+          "cachedResultName": "ProBox Sales Dashboard"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl9u7yZXjIkGvuSM",
+          "mode": "list",
+          "cachedResultName": "Quotes"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [2200, -100],
+      "id": "create-quote",
+      "name": "Create Quote",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "NRSYJf8DM6u3JHEv",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appSthipDsv0DL7Lh",
+          "mode": "list",
+          "cachedResultName": "ProBox Sales Dashboard"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl9u7yZXjIkGvuSM",
+          "mode": "list",
+          "cachedResultName": "Quotes"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": ["id"],
+          "schema": []
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [2200, 100],
+      "id": "update-quote",
+      "name": "Update Quote",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "NRSYJf8DM6u3JHEv",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appSthipDsv0DL7Lh",
+          "mode": "list",
+          "cachedResultName": "ProBox Sales Dashboard"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblProcessedEmails",
+          "mode": "list",
+          "cachedResultName": "ProcessedEmails"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "provider_message_id": "={{ $('Check Existing & Merge').item.json.provider_message_id }}",
+            "processed_at": "={{ $now.toISO() }}",
+            "quote_number": "={{ $('Check Existing & Merge').item.json.quote_number }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [2400, 0],
+      "id": "mark-processed",
+      "name": "Mark Processed",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "NRSYJf8DM6u3JHEv",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger (Every 5 min)": {
+      "main": [[{ "node": "Get Emails Last 5 Minutes", "type": "main", "index": 0 }]]
+    },
+    "Get Emails Last 5 Minutes": {
+      "main": [[{ "node": "Get Processed Emails", "type": "main", "index": 0 }]]
+    },
+    "Get Processed Emails": {
+      "main": [[{ "node": "Filter Unprocessed Emails", "type": "main", "index": 0 }]]
+    },
+    "Filter Unprocessed Emails": {
+      "main": [[{ "node": "Build Full Thread Packet", "type": "main", "index": 0 }]]
+    },
+    "Build Full Thread Packet": {
+      "main": [[{ "node": "Message a model", "type": "main", "index": 0 }]]
+    },
+    "Message a model": {
+      "main": [[{ "node": "Parse LLM JSON", "type": "main", "index": 0 }]]
+    },
+    "Parse LLM JSON": {
+      "main": [[{ "node": "If Stop", "type": "main", "index": 0 }]]
+    },
+    "If Stop": {
+      "main": [
+        [],
+        [{ "node": "Search Quote", "type": "main", "index": 0 }]
+      ]
+    },
+    "Search Quote": {
+      "main": [[{ "node": "Check Existing & Merge", "type": "main", "index": 0 }]]
+    },
+    "Check Existing & Merge": {
+      "main": [[{ "node": "Record Exists?", "type": "main", "index": 0 }]]
+    },
+    "Record Exists?": {
+      "main": [
+        [{ "node": "Create Quote", "type": "main", "index": 0 }],
+        [{ "node": "Update Quote", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create Quote": {
+      "main": [[{ "node": "Mark Processed", "type": "main", "index": 0 }]]
+    },
+    "Update Quote": {
+      "main": [[{ "node": "Mark Processed", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "holistic-v2-001"
+}

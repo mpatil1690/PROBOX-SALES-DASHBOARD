@@ -284,7 +284,13 @@ Follow these steps:
    - Canonical Processing Architecture (Holistic)
    - Build Task List
 3) Ask 1–3 clarifying questions only if required to proceed
-4) Continue from the “🚧 In Progress / Next Steps” list and update statuses as you complete items</pre>
+4) Continue from the "🚧 In Progress / Next Steps" list and update statuses as you complete items
+
+CRITICAL INSTRUCTION STYLE:
+- Give instructions as if explaining to a 10-year-old (simple, clear, step-by-step)
+- Break instructions into small chunks (max 3 steps at a time)
+- Wait for feedback before proceeding to next chunk
+- Never give a full list of instructions at once</pre>
 
           <div class="copyrow">
             <p><strong>Dash-close</strong> (paste before you stop for the day):</p>
@@ -350,6 +356,47 @@ Before stopping, update /Users/mpatil/ProBox/Dashboard/requirements.html with:
               </tr>
             </thead>
             <tbody>
+              <tr>
+                <td><span class="mono">2026-01-10</span></td>
+                <td>
+                  - Completed workflow structure end-to-end: Gmail Trigger → Build Email Packet → Code - Check Dedupe → Message a model → Parse LLM JSON → If (stop check) → Prepare Airtable Fields → Search records → Code - Preserve Fields → Record Exists → (Create Quote OR Merge/Append Stage Updates → Update Quote) → Code - Mark Processed<br />
+                  - Added Code - Preserve Fields node to preserve data from Prepare Airtable Fields when Search records finds nothing (so Create Quote can access the prepared fields)<br />
+                  - Updated Message a model prompt to extract numeric quote identifiers (e.g., "330519" not "INQ 330519") and added detailed stage detection hints<br />
+                  - Updated requirements document to reflect numeric-only quote identifier format<br />
+                  - Workflow structure is complete and all nodes are connected correctly<br />
+                  - Message a model still not extracting quote identifiers (returns empty string) - prompt may need further tuning or email format investigation<br />
+                  - Create Quote field mappings not finished (needs all fields mapped once quote extraction works)
+                </td>
+                <td>
+                  - Nodes added: Code - Check Dedupe, Code - Preserve Fields, Code - Mark Processed<br />
+                  - Nodes renamed: "Build Email Packet" (was Code), "Parse LLM JSON" (was Code), "Prepare Airtable Fields " (trailing space in name), "Record Exists" (was If), "Merge/Append Stage Updates" (was Code), "Create Quote", "Update Quote "<br />
+                  - Search records: alwaysOutputData: true (enabled in Settings)<br />
+                  - Typecast: ON in all Airtable nodes (Create Quote, Update Quote)
+                </td>
+              </tr>
+              <tr>
+                <td><span class="mono">2026-01-12</span></td>
+                <td>
+                  - Fixed duplicate record creation issue: Removed direct connection from "Search records" to "Record Exists" - now Record Exists only receives data from "Preserve Fields"<br />
+                  - Updated "Prepare Airtable Fields" code to output ALL 14 stage fields (even if empty) and set ReceivedAt for new records<br />
+                  - Updated Message a model prompt to remove incorrect "INQ" prefix assumption - quote identifiers are numeric-only, can appear anywhere in email<br />
+                  - Enhanced prompt with better context understanding for stage detection (e.g., "here is invoice" when providing quote = Quotation Preparation, not Invoicing)<br />
+                  - Updated requirements document with exact node names and Preserve Fields code to prevent future confusion<br />
+                  - Fixed "Record Exists" IF node: Enabled "Convert types where required" to handle string-to-boolean conversion<br />
+                  - Fixed "Preserve Fields" code to correctly extract id from Airtable record structure<br />
+                  - Workflow now correctly creates single record (no duplicates) when quote doesn't exist<br />
+                  - BLOCKER: Create Quote node still has incorrect field mappings - showing literal expressions like {{$json.primary_qu... instead of values<br />
+                  - BLOCKER: Message a model prompt needs further refinement - not extracting quote "551308" from email thread
+                </td>
+                <td>
+                  - No new nodes added<br />
+                  - Connection removed: "Search records" → "Record Exists" (duplicate path)<br />
+                  - "Record Exists" IF node: "Convert types where required" = ON<br />
+                  - "Prepare Airtable Fields" code: Added ReceivedAt and all 14 stage fields to output<br />
+                  - "Preserve Fields" code: Fixed to handle Airtable record structure correctly<br />
+                  - Message a model prompt: Removed INQ prefix assumption, improved stage detection context
+                </td>
+              </tr>
               <tr>
                 <td><span class="mono">YYYY-MM-DD</span></td>
                 <td>
@@ -758,37 +805,93 @@ Before stopping, update /Users/mpatil/ProBox/Dashboard/requirements.html with:
               <strong>Airtable Personal Access Token Created</strong>: "n8n-probox-dashboard" with scopes data.records:read, data.records:write
             </li>
             <li>
-              <strong>n8n Workflow (E2E write working)</strong>:
+              <strong>n8n Workflow Structure Complete</strong>: All nodes connected end-to-end
               <ul>
-                <li><strong>Build Email Packet</strong>: fixed missing Subject/From in <span class="mono">email_text</span></li>
-                <li><strong>OpenAI extraction</strong>: returns strict JSON with quote id + stage_updates</li>
-                <li><strong>Stop/Ignore</strong>: IF node correctly ignores emails with no quote id</li>
-                <li><strong>Airtable writes</strong>: Quote rows are created/updated in Airtable and visible in the Quotes table</li>
-                <li><strong>Typecast enabled</strong>: required in Airtable Update node to accept date/number fields reliably</li>
-                <li><strong>Search records</strong>: can find existing quote row by QuoteNumber (returns 1 item)</li>
-                <li><strong>Merge step</strong>: JavaScript merge node outputs <span class="mono">recordId</span> + merged <span class="mono">fields</span> for append-style updates</li>
+                <li><strong>Gmail Trigger</strong> → Build Email Packet → Code - Check Dedupe → Message a model → Parse LLM JSON → If (stop check)</li>
+                <li><strong>If (false path)</strong> → Prepare Airtable Fields → Search records → Code - Preserve Fields → Record Exists</li>
+                <li><strong>Record Exists (true path)</strong> → Create Quote → Code - Mark Processed</li>
+                <li><strong>Record Exists (false path)</strong> → Merge/Append Stage Updates → Update Quote → Code - Mark Processed</li>
+                <li><strong>All nodes properly named</strong> and connected</li>
+                <li><strong>Search records</strong>: alwaysOutputData: true enabled (so workflow continues when no record found)</li>
+                <li><strong>Record Exists IF</strong>: checks if $json.id is empty (true = create, false = update)</li>
+                <li><strong>Typecast enabled</strong>: ON in Create Quote and Update Quote nodes</li>
               </ul>
             </li>
+            <li>
+              <strong>Build Email Packet</strong>: Working correctly, outputs provider_message_id and email_text with From + Subject + Body
+            </li>
+            <li>
+              <strong>Code - Preserve Fields</strong>: Added to preserve data from Prepare Airtable Fields when Search records finds nothing, so Create Quote can access prepared fields
+            </li>
+            <li>
+              <strong>Requirements document updated</strong>: Quote identifier format changed to numeric-only (e.g., "330519" not "INQ 330519")
+            </li>
           </ul>
+
+          <h3>📋 Current n8n Workflow Topology (Node List in Order)</h3>
+          <p class="note"><strong>EXACT NODE NAMES (from Dashboard.json):</strong> Use these exact names when referencing nodes in code.</p>
+          <ol>
+            <li><strong>Gmail Trigger</strong> (Trigger: new email)</li>
+            <li><strong>Build Email Packet</strong> (Code node: outputs provider_message_id + email_text)</li>
+            <li><strong>Check Dedupe</strong> (Code node: currently passes through, dedupe logic pending)</li>
+            <li><strong>Message a model</strong> (OpenAI node: extracts quote identifier + stage updates from email_text)</li>
+            <li><strong>Parse LLM JSON</strong> (Code node: parses OpenAI output, outputs primary_quote_identifier + stage_updates[] + stop flag)</li>
+            <li><strong>If</strong> (IF node: if stop === true → stop; if stop === false → continue)</li>
+            <li><strong>Prepare Airtable Fields </strong> (Code node: NOTE TRAILING SPACE! transforms stage_updates[] to Airtable field mappings, computes CurrentStage/FinalStatus)</li>
+            <li><strong>Search records</strong> (Airtable node: searches Quotes table by QuoteNumber, alwaysOutputData: true)</li>
+            <li><strong>Preserve Fields</strong> (Code node: merges Search result with Prepare Airtable Fields data so Create Quote can access fields)</li>
+            <li><strong>If1</strong> (IF node: if $json.id is empty → TRUE path to Create; if $json.id exists → FALSE path to Update)</li>
+            <li><strong>Create a record</strong> (Airtable node: TRUE path, creates new record)</li>
+            <li><strong>Code in JavaScript</strong> (Code node: FALSE path, merges new updates with existing record fields - this is "Merge/Append Stage Updates")</li>
+            <li><strong>Update record</strong> (Airtable node: FALSE path, updates existing record with merged fields)</li>
+            <li><strong>Mark Processed</strong> (Code node: receives from both Create and Update paths, currently passes through)</li>
+          </ol>
+          <p class="note"><strong>CRITICAL:</strong> "Prepare Airtable Fields " has a trailing space. Always use exact node names when referencing in code: <code>$node["Prepare Airtable Fields "]</code></p>
+
+          <h4>Preserve Fields Node Code (EXACT - Copy/Paste)</h4>
+          <pre>// Preserve data from Prepare Airtable Fields when Search records finds nothing
+// Search records returns array of records: [{id: "...", fields: {...}}, ...]
+// When alwaysOutputData: true and nothing found, it returns the input data
+
+// Search records can return an array or a single item - always take first
+const searchResults = Array.isArray($json) ? $json : [$json];
+const searchRecord = searchResults[0] || null;
+
+// Check if this is an Airtable record (has id property) or input data (has QuoteNumber but no id)
+const isAirtableRecord = searchRecord && searchRecord.id;
+
+if (isAirtableRecord) {
+  // Record exists - return the full Airtable record structure
+  return {
+    json: searchRecord
+  };
+} else {
+  // No record found - Search records returned input data (from Prepare Airtable Fields)
+  // Use that data with explicit null id
+  return {
+    json: {
+      ...searchRecord, // This contains the prepared fields from Prepare Airtable Fields
+      id: null // explicitly no id so If1 can check for empty
+    }
+  };
+}</pre>
 
           <h3>🚧 In Progress / Next Steps (Tomorrow)</h3>
           <ul>
             <li>
-              <strong>Create-if-missing</strong>: finish the record-exists branching
-              <ul>
-                <li>If Search records returns 0 → Create record (using merged fields)</li>
-                <li>If Search records returns 1 → Update record (using merged fields)</li>
-              </ul>
+              <strong>Fix Create Quote field mappings</strong>: Currently showing literal expressions ({{$json.primary_qu...) instead of values. Need to map all fields using correct references: <code>{{ $('Prepare Airtable Fields ').item.json.QuoteNumber }}</code> for QuoteNumber, and similar for all other fields (LastUpdatedAt, CurrentStage, FinalStatus, ReceivedAt, all 14 stage columns)
             </li>
             <li>
-              <strong>Dedupe</strong>:
-              <ul>
-                <li>Store processed <span class="mono">provider_message_id</span> so the same email can’t update twice</li>
-                <li>Mark as processed only after Airtable write succeeds</li>
-              </ul>
+              <strong>Fix Message a model prompt</strong>: Still not extracting quote "551308" from email thread. Need to test with simpler email first, then refine prompt for multi-email threads. Consider adding examples or trying different model.
             </li>
             <li>
-              <strong>Verify cumulative append</strong>: send a second email for same quote and confirm stage cell appends with timestamp divider (no deletion)
+              <strong>Test end-to-end with working quote extraction</strong>: Once Create Quote mappings are fixed and quote extraction works, send test email and verify entire workflow creates/updates Airtable correctly
+            </li>
+            <li>
+              <strong>Verify cumulative append</strong>: Send second email for same quote and confirm stage cell appends with timestamp divider (no deletion of existing text)
+            </li>
+            <li>
+              <strong>Implement dedupe storage</strong>: Store processed provider_message_id in n8n workflow storage so same email can't process twice (Check Dedupe currently just passes through)
             </li>
             <li>
               <strong>Gmail Filter</strong>: Add subject/from filter to exclude system emails (like n8n access notifications)
@@ -804,79 +907,180 @@ Before stopping, update /Users/mpatil/ProBox/Dashboard/requirements.html with:
             <li>Outlook/M365 migration (swap Gmail trigger → Outlook trigger)</li>
           </ul>
 
-          <h3>🎯 Current Blockers / Questions</h3>
+          <h3>✅ What is Working End-to-End</h3>
           <ul>
-            <li>Create-if-missing branch still needs final wiring (Create record should use merged fields output)</li>
-            <li>Dedupe not implemented yet</li>
-            <li>FinalStatus “closed” rule can be tuned later (currently based on stage columns being non-empty)</li>
+            <li>
+              <strong>Workflow structure</strong>: All nodes connected correctly, no duplicate paths
+            </li>
+            <li>
+              <strong>Duplicate prevention</strong>: Fixed - workflow now creates single record when quote doesn't exist (removed duplicate connection from Search records to Record Exists)
+            </li>
+            <li>
+              <strong>Record Exists logic</strong>: IF node correctly routes to Create (when id is empty) or Update (when id exists) paths
+            </li>
+            <li>
+              <strong>Preserve Fields</strong>: Correctly extracts id from Airtable records and preserves prepared fields when no record found
+            </li>
+            <li>
+              <strong>Prepare Airtable Fields</strong>: Outputs all required fields including all 14 stage columns and ReceivedAt
+            </li>
+            <li>
+              <strong>Search records</strong>: Finds existing records by QuoteNumber, returns empty item when nothing found (alwaysOutputData: true)
+            </li>
+            <li>
+              <strong>Email processing</strong>: Gmail trigger → Build Email Packet → Check Dedupe → Message a model → Parse LLM JSON flow works
+            </li>
           </ul>
 
-          <h3>📐 Canonical Processing Architecture (Holistic)</h3>
+          <h3>🎯 Current Blockers / Questions</h3>
+          <ul>
+            <li>
+              <strong>BLOCKER: Create Quote field mappings showing literal expressions</strong>: Airtable is receiving expressions like {{$json.primary_qu... instead of actual values. Need to fix all field mappings to use correct node references: <code>{{ $('Prepare Airtable Fields ').item.json.FieldName }}</code>
+            </li>
+            <li>
+              <strong>BLOCKER: Message a model not extracting quote identifiers from email threads</strong>: Returns empty primary_quote_identifier for email thread with "INQ 551308" in subject. Prompt updated today but still not working. May need to:
+              <ul>
+                <li>Test with simpler single-email first to verify extraction works</li>
+                <li>Add examples to prompt showing how to extract from email threads</li>
+                <li>Consider if email_text format (with multiple emails in thread) is confusing the model</li>
+                <li>Try different model (gpt-4 vs gpt-4.1-mini) or add few-shot examples</li>
+              </ul>
+            </li>
+            <li>
+              <strong>Dedupe logic not implemented</strong>: Check Dedupe and Mark Processed nodes exist but just pass through. Need to add n8n workflow storage logic
+            </li>
+            <li>FinalStatus "closed" rule can be tuned later (currently based on stage columns being non-empty)</li>
+          </ul>
+
+          <h3>📐 Canonical Processing Architecture (Holistic v2)</h3>
           <p class="note">
-            This is the single, canonical architecture for handling real inbox behavior:
-            partial updates, new info, cumulative updates, and completion/“drop off”.
+            This is the complete, holistic architecture for processing emails from the sales inbox.
+            It handles multiple emails per run, full email threads, comprehensive data extraction, and proper deduplication.
           </p>
 
           <p><strong>Core invariants</strong></p>
           <ul>
             <li><strong>One quote = one Airtable row</strong> keyed by <span class="mono">QuoteNumber</span>.</li>
-            <li><strong>Emails are deltas</strong>: each email may update 0–N stages.</li>
-            <li><strong>Cumulative merge</strong>: never delete prior stage text; default behavior is append with a timestamp divider.</li>
-            <li><strong>No duplicates</strong>: dedupe by <span class="mono">provider_message_id</span>.</li>
-              <li>
-                <strong>Drop off when done/cancelled</strong>: the “active dashboard” is an Airtable view filtered to
-                <span class="mono">ShowOnDashboard = 1</span> (formula field).
-              </li>
+            <li><strong>Emails are deltas</strong>: each email may update 0–N stages with comprehensive data.</li>
+            <li><strong>Cumulative merge</strong>: never delete prior data; append new data with timestamp divider (avoid exact duplicates).</li>
+            <li><strong>No duplicates</strong>: dedupe by <span class="mono">provider_message_id</span> stored in <span class="mono">ProcessedEmails</span> table.</li>
+            <li><strong>Full thread processing</strong>: extract and process the ENTIRE email thread (all responses), not just the latest email.</li>
+            <li><strong>Comprehensive extraction</strong>: extract ALL data from emails (all bullet points, all details, all fields), not just the 14 stage names.</li>
+            <li><strong>Existing data check</strong>: before updating, check if data already exists in Airtable; only add missing data, never overwrite existing.</li>
+            <li>
+              <strong>Drop off when done/cancelled</strong>: the "active dashboard" is an Airtable view filtered to
+              <span class="mono">ShowOnDashboard = 1</span> (formula field).
+            </li>
           </ul>
 
-          <p><strong>Canonical node flow (n8n)</strong></p>
-          <pre><code>1) Gmail Trigger (new email)
-2) Code - Build Email Packet
-   Output: { provider_message_id, email_text }
-3) (Optional but recommended) Code - Dedupe
-   If provider_message_id already processed → stop
-4) OpenAI - Message a model
-   Input: email_text
-   Output: strict JSON string
-5) Code - Parse LLM JSON
-   Output: { primary_quote_identifier, stage_updates[], stop }
-6) IF stop === true
-   TRUE: stop/ignore
-   FALSE: continue
-7) Airtable - Search records (Quotes)
-   Filter: {QuoteNumber} = "primary_quote_identifier"
-   Output: 0 records or 1 record (existing)
-8) Code - Merge/Append Stage Updates
-   Inputs:
-     - existing Airtable record (if any)
-     - stage_updates[] from LLM
-   Behavior:
-     - for each returned stage_update:
-       - mergeCell(existing, new) => append with timestamp divider (avoid dupes)
-     - compute CurrentStage from highest stage that has content
-     - compute FinalStatus:
-       - cancelled if email indicates cancellation (set CancelledAt once)
-       - closed if all 14 stage columns non-empty (set ClosedAt once)
-       - else open
-     - set ReceivedAt on create; set ClosedAt/CancelledAt once
-   Output: { recordId (nullable), fields (object) }
-9) IF recordId exists?
-   TRUE: Airtable Update record (Typecast ON)
-   FALSE: Airtable Create record (Typecast ON)
-10) (Optional but recommended) Mark Dedupe Processed
-   Only after successful Airtable write</code></pre>
+          <p><strong>Email ingestion strategy (5-minute window)</strong></p>
+          <ul>
+            <li><strong>Time-based processing</strong>: Check emails received in the last 5 minutes (not just "new" emails).</li>
+            <li><strong>Batch processing</strong>: Handle multiple emails in one workflow run (not one email at a time).</li>
+            <li><strong>Deduplication check</strong>: For each email in the 5-minute window, check <span class="mono">ProcessedEmails</span> table to see if <span class="mono">provider_message_id</span> already exists.</li>
+            <li><strong>Filter unprocessed</strong>: Only process emails that are NOT in <span class="mono">ProcessedEmails</span> table.</li>
+            <li><strong>Full thread extraction</strong>: For each email, extract the ENTIRE email thread (all 5 responses if it's a thread, not just the latest).</li>
+          </ul>
+
+          <p><strong>Canonical node flow (n8n) - Holistic v2</strong></p>
+          <pre><code>1) Schedule Trigger (every 5 minutes)
+   OR Gmail Trigger (configured to search last 5 minutes)
+
+2) Code - Get Emails from Last 5 Minutes
+   - Query Gmail API for emails received in last 5 minutes
+   - Returns: array of email objects { id, threadId, receivedAt, ... }
+
+3) Code - Filter Already Processed
+   - For each email, check ProcessedEmails table in Airtable
+   - Filter: only keep emails where provider_message_id NOT in ProcessedEmails
+   - Output: array of unprocessed emails
+
+4) Loop Over Unprocessed Emails (n8n Split In Batches or For Each)
+   For each unprocessed email:
+
+   5) Code - Build Full Email Thread Packet
+      - Fetch the ENTIRE email thread (all responses in thread)
+      - Extract: provider_message_id, full_thread_text (all emails in thread)
+      - Output: { provider_message_id, full_thread_text }
+
+   6) OpenAI - Message a model
+      - Input: full_thread_text (entire thread, not just latest email)
+      - Prompt: Extract comprehensive data (all details, all bullet points, all fields)
+      - Output: strict JSON with comprehensive extracted data
+
+   7) Code - Parse LLM JSON
+      - Output: { primary_quote_identifier, comprehensive_data, stage_updates[], stop }
+
+   8) IF stop === true
+      TRUE: skip this email, continue to next
+      FALSE: continue
+
+   9) Airtable - Search records (Quotes)
+      Filter: {QuoteNumber} = "primary_quote_identifier"
+      Output: 0 records or 1 record (existing)
+
+   10) Code - Check Existing Data & Merge
+       - Read existing Airtable record (if any)
+       - For each field in comprehensive_data:
+         - If field already exists in Airtable → skip (don't overwrite)
+         - If field is missing → add it
+       - For each stage_update:
+         - mergeCell(existing, new) => append with timestamp divider (avoid exact duplicates)
+       - Compute CurrentStage from highest stage that has content
+       - Compute FinalStatus (cancelled, closed, or open)
+       - Output: { recordId (nullable), fields (object) }
+
+   11) IF recordId exists?
+       TRUE: Airtable Update record (Typecast ON)
+       FALSE: Airtable Create record (Typecast ON)
+
+   12) Airtable - Create record (ProcessedEmails)
+       - Only after successful Create/Update
+       - Store: provider_message_id, processed_at, quote_number
+       - This marks the email as "processed" for future runs
+
+End Loop
+
+13) Done - All unprocessed emails from last 5 minutes have been processed</code></pre>
+
+          <p><strong>Data extraction requirements</strong></p>
+          <ul>
+            <li><strong>Extract ALL data</strong>: Not just the 14 stage names. Extract all bullet points, all details, all fields mentioned in the email thread.</li>
+            <li><strong>Comprehensive fields</strong>: Customer names, addresses, phone numbers, PO numbers, invoice numbers, tracking numbers, dates, amounts, quantities, locations, special requirements, etc.</li>
+            <li><strong>Full thread context</strong>: Process the ENTIRE email thread (all 5 responses if it's a thread). The LLM must see all responses to extract complete information.</li>
+            <li><strong>Stage updates</strong>: Identify which of the 14 stages are updated, and extract all relevant details for each stage.</li>
+          </ul>
+
+          <p><strong>Deduplication strategy</strong></p>
+          <ul>
+            <li><strong>ProcessedEmails table</strong>: Airtable table with fields: <span class="mono">provider_message_id</span> (unique), <span class="mono">processed_at</span> (date/time), <span class="mono">quote_number</span> (text).</li>
+            <li><strong>Check before processing</strong>: Before processing any email, check if its <span class="mono">provider_message_id</span> exists in <span class="mono">ProcessedEmails</span> table.</li>
+            <li><strong>Mark after success</strong>: Only after successful Airtable write (Create or Update), insert the <span class="mono">provider_message_id</span> into <span class="mono">ProcessedEmails</span> table.</li>
+            <li><strong>No reprocessing</strong>: Once an email is in <span class="mono">ProcessedEmails</span>, it will never be processed again (unless manually deleted from table).</li>
+          </ul>
+
+          <p><strong>Setup: Create ProcessedEmails table in Airtable</strong></p>
+          <ol>
+            <li>In Airtable base "ProBox Sales Dashboard", create a new table named <span class="mono">ProcessedEmails</span></li>
+            <li>Add field: <span class="mono">provider_message_id</span> (Single line text, make it unique if possible)</li>
+            <li>Add field: <span class="mono">processed_at</span> (Date/time)</li>
+            <li>Add field: <span class="mono">quote_number</span> (Single line text)</li>
+            <li>Note the table ID (you'll need it when importing the workflow JSON)</li>
+          </ol>
 
           <p><strong>How we handle all email cases (explicit)</strong></p>
           <ul>
-            <li><strong>Email has new info but only for 1 stage</strong>: only that stage column changes (append).</li>
-            <li><strong>Email has multiple stage updates</strong>: multiple columns update in one run.</li>
-            <li><strong>Email is shorter / missing fields</strong>: we do not clear anything; untouched columns stay as-is.</li>
-            <li><strong>Email is a correction</strong>: append with a “CORRECTION:” prefix (Phase I) and do not delete old text.</li>
+            <li><strong>Email has new info but only for 1 stage</strong>: only that stage column changes (append). All other data preserved.</li>
+            <li><strong>Email has multiple stage updates</strong>: multiple columns update in one run. All comprehensive data extracted and merged.</li>
+            <li><strong>Email is shorter / missing fields</strong>: we do not clear anything; untouched columns stay as-is. Only missing data is added.</li>
+            <li><strong>Email is a correction</strong>: append with a "CORRECTION:" prefix and do not delete old text.</li>
             <li><strong>Email is a reschedule</strong>: append new dates; do not erase old dates.</li>
             <li><strong>Email is cancellation</strong>: set FinalStatus=cancelled, set CancelledAt once; keep active for 2 days then drop off.</li>
-            <li><strong>Email indicates completion</strong>: later stages may become populated; when all 14 are populated → FinalStatus becomes closed and it “drops off” the active view.</li>
-            <li><strong>Email has no usable quote identifier</strong>: stop/ignore (no row created) unless we later choose to create TEMP leads.</li>
-            <li><strong>One email updates multiple quotes</strong>: <em>Phase II</em> (split into multiple quote updates and run merge per quote).</li>
+            <li><strong>Email indicates completion</strong>: later stages may become populated; when all 14 are populated → FinalStatus becomes closed and it "drops off" the active view.</li>
+            <li><strong>Email has no usable quote identifier</strong>: skip this email, continue to next email in batch.</li>
+            <li><strong>Email thread with 5 responses</strong>: extract and process ALL 5 responses as one complete thread. LLM sees entire conversation history.</li>
+            <li><strong>Multiple emails in 5-minute window</strong>: process all unprocessed emails in batch. Each email checked against ProcessedEmails before processing.</li>
+            <li><strong>Data already exists in Airtable</strong>: check existing data before updating. If data already exists, skip adding it (don't overwrite). Only add missing data.</li>
           </ul>
         </div>
       </section>
@@ -911,33 +1115,68 @@ Before stopping, update /Users/mpatil/ProBox/Dashboard/requirements.html with:
               </tr>
               <tr>
                 <td><span class="status done">done</span></td>
-                <td>n8n Workflow: Gmail Trigger → Code (email packet) → LLM → Parse JSON → If (stop check)</td>
-                <td>✅ All 5 nodes working; output validated</td>
+                <td>n8n Workflow structure: All nodes connected end-to-end (Gmail → Build Email Packet → Check Dedupe → Message a model → Parse JSON → If → Prepare Fields → Search → Preserve Fields → Record Exists → Create/Update → Mark Processed)</td>
+                <td>✅ Complete workflow topology with all branches; nodes properly named</td>
+              </tr>
+              <tr>
+                <td><span class="status done">done</span></td>
+                <td>n8n Code Node: Prepare Airtable Fields (transforms stage_updates[] to Airtable field mappings)</td>
+                <td>✅ Maps stage_name to column names, computes CurrentStage/FinalStatus, outputs all fields</td>
+              </tr>
+              <tr>
+                <td><span class="status done">done</span></td>
+                <td>n8n Code Node: Code - Preserve Fields (preserves Prepare Airtable Fields data when Search finds nothing)</td>
+                <td>✅ Merges prepared fields with search result so Create Quote can access data</td>
+              </tr>
+              <tr>
+                <td><span class="status done">done</span></td>
+                <td>n8n Code Node: Merge/Append Stage Updates (cumulative merge logic)</td>
+                <td>✅ Appends new stage text with timestamp divider, computes CurrentStage/FinalStatus</td>
+              </tr>
+              <tr>
+                <td><span class="status done">done</span></td>
+                <td>n8n Airtable Node: Search records with alwaysOutputData: true</td>
+                <td>✅ Finds existing records by QuoteNumber; outputs empty item when nothing found</td>
+              </tr>
+              <tr>
+                <td><span class="status done">done</span></td>
+                <td>n8n IF Node: Record Exists (checks if $json.id is empty)</td>
+                <td>✅ TRUE path → Create Quote, FALSE path → Merge/Append → Update Quote. Fixed: Enabled "Convert types where required", removed duplicate connection from Search records</td>
+              </tr>
+              <tr>
+                <td><span class="status done">done</span></td>
+                <td>Fix duplicate record creation issue</td>
+                <td>✅ Fixed: Removed direct connection from "Search records" to "Record Exists". Now Record Exists only receives processed data from "Preserve Fields"</td>
+              </tr>
+              <tr>
+                <td><span class="status done">done</span></td>
+                <td>Prepare Airtable Fields: Output all 14 stage fields + ReceivedAt</td>
+                <td>✅ Updated code to ensure all stage fields are present in output (even if empty) and ReceivedAt is set for new records</td>
               </tr>
               <tr>
                 <td><span class="status inprogress">in progress</span></td>
-                <td>n8n Code Node: Transform stage_updates[] → Airtable field mappings</td>
-                <td>Need to map stage_name to column names + compute CurrentStage/FinalStatus</td>
+                <td>Fix Message a model prompt: Extract quote identifiers (numeric only, e.g., "551308")</td>
+                <td>⚠️ BLOCKER: Not extracting from email threads. Prompt updated to remove INQ assumption and improve context. Need to test with simpler email first, then add thread-handling examples.</td>
               </tr>
               <tr>
                 <td><span class="status inprogress">in progress</span></td>
-                <td>n8n Airtable Node: Complete field mappings (QuoteNumber, stages, timestamps)</td>
-                <td>Base/Table/Token set; field mappings pending</td>
+                <td>n8n Airtable Node: Create Quote field mappings (QuoteNumber, LastUpdatedAt, CurrentStage, FinalStatus, ReceivedAt, all 14 stage columns)</td>
+                <td>⚠️ BLOCKER: Field mappings showing literal expressions ({{$json.primary_qu...) instead of values. Need to use: <code>{{ $('Prepare Airtable Fields ').item.json.QuoteNumber }}</code> for all fields</td>
               </tr>
               <tr>
                 <td><span class="status todo">todo</span></td>
-                <td>Test end-to-end: real email → Airtable upsert</td>
-                <td>Validate entire pipeline works</td>
+                <td>Test end-to-end: real email with quote identifier → Airtable upsert</td>
+                <td>BLOCKED: Waiting for Message a model to extract quote identifiers correctly</td>
+              </tr>
+              <tr>
+                <td><span class="status todo">todo</span></td>
+                <td>Dedupe logic: Implement storage in Code - Check Dedupe and Code - Mark Processed</td>
+                <td>Nodes exist but just pass through; need to add n8n workflow storage logic</td>
               </tr>
               <tr>
                 <td><span class="status todo">todo</span></td>
                 <td>Gmail filter: exclude system/notification emails</td>
                 <td>Add subject/from filter to Gmail Trigger</td>
-              </tr>
-              <tr>
-                <td><span class="status todo">todo</span></td>
-                <td>Dedupe logic: store ProviderMessageId in n8n storage</td>
-                <td>Prevent double-processing same email</td>
               </tr>
               <tr>
                 <td><span class="status todo">todo</span></td>
@@ -975,11 +1214,22 @@ Before stopping, update /Users/mpatil/ProBox/Dashboard/requirements.html with:
       </section>
 
       <section id="notes" style="margin-top: 14px">
-        <h2>
-          Things to Remember (Don’t Forget)
-          <span class="status done">locked</span>
-        </h2>
-        <div class="body">
+          <h2>
+            Things to Remember (Don’t Forget)
+            <span class="status done">locked</span>
+          </h2>
+          <div class="body">
+            <p class="note" style="background: #fff3cd; padding: 8px; border-left: 4px solid #ffc107;">
+              <strong>Instruction style (CRITICAL):</strong> User is NOT a developer. All instructions must be:
+              <ul>
+                <li><strong>ONE step at a time</strong> (not multiple steps in one response)</li>
+                <li><strong>Click-by-click detail</strong> (e.g., "Click the 'Settings' tab at the top of the node panel", not "go to settings")</li>
+                <li><strong>No assumptions</strong> (don't say "configure the node" - say exactly which field to click, what dropdown to open, what value to type)</li>
+                <li><strong>Show exact UI elements</strong> (button names, tab names, field labels as they appear on screen)</li>
+                <li><strong>Wait for confirmation</strong> before giving the next step</li>
+              </ul>
+              Do NOT use phrases like "add a node", "configure it", "set it up" - instead say "Click the + button, type 'Code' in the search box, click 'Code' node, drag it between X and Y nodes".
+            </p>
           <ul>
             <li>
               <strong>Don’t over-engineer rules</strong>: emails are messy; LLM interpretation will
@@ -1040,17 +1290,19 @@ Before stopping, update /Users/mpatil/ProBox/Dashboard/requirements.html with:
             never break. Output must identify the quote and provide stage updates as text.
           </p>
           <pre>{
-  "primary_quote_identifier": "Q-10422",
+  "primary_quote_identifier": "330519",
   "stage_updates": [
     {
       "stage_name": "PO Received",
-      "status": "done",
-      "cell_text": "✅ PO received: PO-8831\\nQty: 4x 40HC\\nShip-to: Phoenix, AZ",
-      "confidence": 0.92,
-      "optional_fields": { "poNumber": "PO-8831" }
+      "cell_text": "✅ PO received: PO-8831\\nQty: 4x 40HC\\nShip-to: Phoenix, AZ"
     }
   ]
 }</pre>
+          <p class="note">
+            <strong>Quote identifier format:</strong> Extract only the numeric part (e.g., "23456000", "330519", "104892", "551308").
+            Quote identifiers are numeric-only and can appear anywhere in the email (Subject line, body, etc.).
+            Extract the numeric value only, without any prefixes or text.
+          </p>
           <p class="note">
             Enforce JSON validity in n8n before writing to Airtable.
           </p>
@@ -1206,11 +1458,10 @@ return {
 
           <p><strong>Recommended LLM output for cumulative merging</strong></p>
           <pre>{
-  "primary_quote_identifier": "INQ 104892",
+  "primary_quote_identifier": "104892",
   "stage_updates": [
     {
       "stage_name": "Inquiry & Lead Capture",
-      "operation": "append",
       "cell_text": "✅ Received pallet freight request from Chicago IL to Dallas; 6 pallets..."
     }
   ]
