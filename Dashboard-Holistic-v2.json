@@ -42,7 +42,7 @@
     },
     {
       "parameters": {
-        "operation": "list",
+        "operation": "getAll",
         "base": {
           "__rl": true,
           "value": "appSthipDsv0DL7Lh",
