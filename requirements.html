@@ -1068,6 +1068,22 @@ End Loop
             <li>Note the table ID (you'll need it when importing the workflow JSON)</li>
           </ol>
 
+          <p><strong>Workflow JSON: Credential Setup</strong></p>
+          <p class="note">
+            The workflow JSON file (<span class="mono">Dashboard-Holistic-v2.json</span>) has credential IDs embedded from the original export.
+            When importing to the <strong>same n8n instance</strong>, credentials should auto-map and you won't get prompts.
+            If importing to a different n8n instance, you'll need to map credentials manually (n8n will prompt you).
+          </p>
+          <p><strong>Credential names used in JSON:</strong></p>
+          <ul>
+            <li>Gmail: <span class="mono">"Gmail account"</span></li>
+            <li>OpenAI: <span class="mono">"OpenAi account"</span></li>
+            <li>Airtable: <span class="mono">"Airtable Personal Access Token account"</span></li>
+          </ul>
+          <p class="note">
+            If you need to create new credentials, use these exact names so the workflow can find them automatically.
+          </p>
+
           <p><strong>How we handle all email cases (explicit)</strong></p>
           <ul>
             <li><strong>Email has new info but only for 1 stage</strong>: only that stage column changes (append). All other data preserved.</li>
