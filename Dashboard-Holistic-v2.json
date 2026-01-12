@@ -256,8 +256,28 @@
           "cachedResultName": "Quotes"
         },
         "columns": {
-          "mappingMode": "autoMapInputData",
-          "value": {},
+          "mappingMode": "defineBelow",
+          "value": {
+            "QuoteNumber": "={{ $json.fields.QuoteNumber }}",
+            "LastUpdatedAt": "={{ $json.fields.LastUpdatedAt }}",
+            "CurrentStage": "={{ $json.fields.CurrentStage }}",
+            "FinalStatus": "={{ $json.fields.FinalStatus }}",
+            "ReceivedAt": "={{ $json.fields.ReceivedAt }}",
+            "Inquiry & Lead Capture": "={{ $json.fields['Inquiry & Lead Capture'] }}",
+            "Research & Discovery": "={{ $json.fields['Research & Discovery'] }}",
+            "Quotation Preparation": "={{ $json.fields['Quotation Preparation'] }}",
+            "Quote Approval": "={{ $json.fields['Quote Approval'] }}",
+            "PO Received": "={{ $json.fields['PO Received'] }}",
+            "Order Processing": "={{ $json.fields['Order Processing'] }}",
+            "Invoicing": "={{ $json.fields.Invoicing }}",
+            "Payment Received": "={{ $json.fields['Payment Received'] }}",
+            "Release Sent": "={{ $json.fields['Release Sent'] }}",
+            "Release Received": "={{ $json.fields['Release Received'] }}",
+            "Delivery Preparation": "={{ $json.fields['Delivery Preparation'] }}",
+            "Delivery Set": "={{ $json.fields['Delivery Set'] }}",
+            "Delivery Confirmed": "={{ $json.fields['Delivery Confirmed'] }}",
+            "Post-Delivery Follow-up": "={{ $json.fields['Post-Delivery Follow-up'] }}"
+          },
           "matchingColumns": [],
           "schema": []
         },
