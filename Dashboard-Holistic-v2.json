@@ -72,7 +72,7 @@
     },
     {
       "parameters": {
-        "mode": "runOnceForEachItem",
+        "mode": "runOnceForAllItems",
         "jsCode": "// Filter: Only keep emails that are NOT in ProcessedEmails table\n\nconst currentEmails = $input.all();\nconst processedRecords = $node[\"Get Processed Emails\"].json || [];\n\n// Build set of processed message IDs\nconst processedIds = new Set();\nprocessedRecords.forEach(record => {\n  const msgId = record.fields?.provider_message_id || record.fields?.ProviderMessageId || \"\";\n  if (msgId) processedIds.add(String(msgId).trim());\n});\n\n// Filter emails\nconst unprocessedEmails = currentEmails\n  .map(item => item.json)\n  .filter(email => {\n    const msgId = email.id || email.messageId || email.internalId || \"\";\n    return msgId && !processedIds.has(String(msgId).trim());\n  });\n\nreturn unprocessedEmails.map(email => ({ json: email }));"
       },
       "type": "n8n-nodes-base.code",
